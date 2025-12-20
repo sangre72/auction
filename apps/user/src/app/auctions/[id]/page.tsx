@@ -6,10 +6,12 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { QueueOverlay } from '@/components/queue/QueueOverlay';
 import { QueueListPanel } from '@/components/queue/QueueListPanel';
+import { BidConfirmModal } from '@/components/auction/BidConfirmModal';
 import { productsApi, slotsApi, Product, SlotListItem } from '@/lib/api';
 import { useProductQueue } from '@/hooks/useProductQueue';
 import { getUserId } from '@/lib/user';
 import { formatPrice } from '@auction/shared';
+import { requestPayment, generateOrderId, PaymentMethod } from '@/lib/payment';
 
 export default function AuctionDetailPage() {
   const params = useParams();
@@ -24,11 +26,60 @@ export default function AuctionDetailPage() {
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [userId, setUserId] = useState<string>('');
+  const [isBidModalOpen, setIsBidModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
+  const [paymentMessage, setPaymentMessage] = useState('');
+  const [completedPaymentId, setCompletedPaymentId] = useState<string | null>(null);
 
   // 클라이언트에서만 userId 초기화
   useEffect(() => {
     setUserId(getUserId());
   }, []);
+
+  // 대기 중인 결제가 있으면 확인
+  useEffect(() => {
+    const checkPendingPayment = async () => {
+      const pendingPaymentStr = localStorage.getItem('pendingPayment');
+      if (!pendingPaymentStr) return;
+
+      try {
+        const pendingPayment = JSON.parse(pendingPaymentStr);
+        // 10분 이내의 결제 정보만 확인
+        if (Date.now() - pendingPayment.timestamp > 10 * 60 * 1000) {
+          localStorage.removeItem('pendingPayment');
+          return;
+        }
+
+        // 결제 검증 (상품/슬롯 정보 포함)
+        const response = await fetch('/api/payment/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentId: pendingPayment.orderId,
+            productId: pendingPayment.productId,
+            slotNumbers: pendingPayment.selectedSlots,
+            totalAmount: pendingPayment.totalAmount,
+            paymentMethod: 'kakaopay',
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          // 결제 완료 - 완료 페이지로 이동
+          localStorage.removeItem('pendingPayment');
+          router.push(`/payment/complete?paymentId=${pendingPayment.orderId}`);
+        } else {
+          // 결제 미완료 - pendingPayment 유지 (사용자가 결제를 완료하지 않았을 수 있음)
+          console.log('Payment not completed yet:', data.message);
+        }
+      } catch (error) {
+        console.error('Failed to check pending payment:', error);
+      }
+    };
+
+    checkPendingPayment();
+  }, [router]);
 
   // 대기열 관리
   const queue = useProductQueue({
@@ -77,7 +128,8 @@ export default function AuctionDetailPage() {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       queue.disconnect();
     };
-  }, [queue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLeaveQueue = () => {
     queue.disconnect();
@@ -159,14 +211,151 @@ export default function AuctionDetailPage() {
   const slotPrice = product.slot_price || product.current_price || product.starting_price;
   const totalBidAmount = selectedSlots.length * slotPrice;
 
-  const handleBid = async () => {
-    if (selectedSlots.length === 0) {
-      alert('슬롯을 선택해주세요.');
-      return;
-    }
+  const handleBid = () => {
+    if (selectedSlots.length === 0) return;
+    setIsBidModalOpen(true);
+  };
 
-    // TODO: 실제 구매 API 연동 (로그인 체크 필요)
-    alert(`${selectedSlots.length}개 슬롯 입찰 완료!\n선택한 슬롯: ${selectedSlots.sort((a, b) => a - b).join(', ')}\n총 금액: ${formatPrice(totalBidAmount)}원`);
+  const handleConfirmBid = async (paymentMethod: PaymentMethod) => {
+    if (!product) return;
+
+    setIsProcessing(true);
+    setPaymentStatus('processing');
+    console.log('=== 결제 시작 ===');
+    console.log('paymentMethod:', paymentMethod);
+    console.log('totalAmount:', totalBidAmount);
+
+    try {
+      const orderId = generateOrderId();
+      const orderName = `${product.title} - ${selectedSlots.length}개 슬롯`;
+      console.log('orderId:', orderId);
+
+      // 결제 정보를 로컬스토리지에 저장 (리다이렉트 복귀 시 사용)
+      localStorage.setItem('pendingPayment', JSON.stringify({
+        orderId,
+        orderName,
+        productId: product.id,
+        selectedSlots,
+        totalAmount: totalBidAmount,
+        timestamp: Date.now(),
+      }));
+      console.log('pendingPayment 저장 완료');
+
+      console.log('requestPayment 호출...');
+      const result = await requestPayment({
+        orderId,
+        orderName,
+        totalAmount: totalBidAmount,
+        paymentMethod,
+      });
+      console.log('requestPayment 결과:', result);
+
+      // 리다이렉트 방식의 경우 여기까지 오지 않을 수 있음
+      if (result.success) {
+        // 결제 성공 - 백엔드에 저장
+        console.log('결제 성공! 백엔드 저장 중...');
+        try {
+          const verifyResponse = await fetch('/api/payment/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paymentId: orderId,
+              productId: product.id,
+              slotNumbers: selectedSlots,
+              paymentMethod,
+            }),
+          });
+          const verifyData = await verifyResponse.json();
+          console.log('백엔드 저장 결과:', verifyData);
+
+          if (verifyData.success) {
+            localStorage.removeItem('pendingPayment');
+            setCompletedPaymentId(orderId);
+            setPaymentStatus('success');
+            setPaymentMessage('결제가 성공적으로 완료되었습니다.');
+          } else {
+            setPaymentStatus('failed');
+            setPaymentMessage(verifyData.message || '결제 처리 중 오류가 발생했습니다.');
+          }
+        } catch (err) {
+          console.error('백엔드 저장 실패:', err);
+          setPaymentStatus('failed');
+          setPaymentMessage('결제 정보 저장 중 오류가 발생했습니다.');
+        }
+      } else if (result.code === 'USER_CANCEL') {
+        // 사용자 취소
+        console.log('사용자 취소');
+        localStorage.removeItem('pendingPayment');
+        setPaymentStatus('idle');
+        setIsBidModalOpen(false);
+      } else if (result.code === 'NO_RESPONSE') {
+        // 팝업이 닫혔지만 결과를 못 받음 - 결제 상태 직접 확인
+        console.log('응답 없음 - 결제 상태 확인 중...');
+
+        // 잠시 대기 후 결제 상태 확인
+        setTimeout(async () => {
+          try {
+            const verifyResponse = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                paymentId: orderId,
+                productId: product.id,
+                slotNumbers: selectedSlots,
+                paymentMethod: 'kakaopay',
+              }),
+            });
+            const verifyData = await verifyResponse.json();
+            console.log('결제 확인 결과:', verifyData);
+
+            if (verifyData.success) {
+              localStorage.removeItem('pendingPayment');
+              setCompletedPaymentId(orderId);
+              setPaymentStatus('success');
+              setPaymentMessage('결제가 성공적으로 완료되었습니다.');
+            } else {
+              // 결제가 완료되지 않음
+              setPaymentStatus('failed');
+              setPaymentMessage('결제가 완료되지 않았습니다. 다시 시도해 주세요.');
+              localStorage.removeItem('pendingPayment');
+            }
+          } catch (err) {
+            console.error('결제 확인 실패:', err);
+            setPaymentStatus('failed');
+            setPaymentMessage('결제 확인 중 오류가 발생했습니다.');
+            localStorage.removeItem('pendingPayment');
+          }
+        }, 1000);
+      } else if (result.code) {
+        // 기타 에러
+        console.log('결제 에러:', result.code, result.message);
+        localStorage.removeItem('pendingPayment');
+        setPaymentStatus('failed');
+        setPaymentMessage(result.message || '결제에 실패했습니다.');
+      } else {
+        // code가 없으면 리다이렉트 중일 수 있음
+        console.log('리다이렉트 중...');
+      }
+    } catch (error) {
+      console.error('Payment failed:', error);
+      localStorage.removeItem('pendingPayment');
+      setPaymentStatus('failed');
+      setPaymentMessage('결제 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaymentComplete = () => {
+    setIsBidModalOpen(false);
+    setPaymentStatus('idle');
+    setSelectedSlots([]);
+    if (completedPaymentId) {
+      router.push(`/payment/complete?paymentId=${completedPaymentId}`);
+    } else {
+      // 데이터 새로고침
+      fetchData();
+    }
   };
 
   // 이미지 배열 (현재는 썸네일만 있음)
@@ -429,7 +618,7 @@ export default function AuctionDetailPage() {
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  입찰 후 취소 불가 · 신중하게 선택하세요
+                  즉시 결제 · 결제 후 취소 불가
                 </p>
               </div>
 
@@ -440,6 +629,27 @@ export default function AuctionDetailPage() {
       </main>
 
       <Footer />
+
+      {/* 입찰 확인 모달 */}
+      <BidConfirmModal
+        isOpen={isBidModalOpen}
+        onClose={() => {
+          if (!isProcessing && paymentStatus !== 'processing') {
+            setIsBidModalOpen(false);
+            setPaymentStatus('idle');
+          }
+        }}
+        onConfirm={handleConfirmBid}
+        onComplete={handlePaymentComplete}
+        productTitle={product.title}
+        productImage={product.thumbnail_url}
+        selectedSlots={selectedSlots}
+        slotPrice={slotPrice}
+        totalAmount={totalBidAmount}
+        isProcessing={isProcessing}
+        paymentStatus={paymentStatus}
+        paymentMessage={paymentMessage}
+      />
     </div>
   );
 }

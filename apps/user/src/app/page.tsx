@@ -199,7 +199,7 @@ export default function Home() {
             ].map((category) => (
               <a
                 key={category.name}
-                href={`/auctions?category=${category.name}`}
+                href={`/?category=${encodeURIComponent(category.name)}`}
                 className="group flex flex-col items-center p-6 bg-white rounded-2xl border border-gray-100 hover:shadow-lg transition-all"
               >
                 <div className={`w-14 h-14 bg-gradient-to-br ${category.color} rounded-xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform`}>

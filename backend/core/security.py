@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
 from jose import JWTError, jwt
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,9 @@ from .database import get_db
 
 # Bearer 토큰 스키마
 bearer_scheme = HTTPBearer()
+
+# 쿠키 이름
+USER_TOKEN_COOKIE = "user_token"
 
 
 def get_password_hash(password: str) -> str:
@@ -72,7 +75,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """현재 인증된 사용자 반환"""
+    """현재 인증된 사용자 반환 (Authorization 헤더 사용 - 관리자용)"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="인증 정보가 유효하지 않습니다",
@@ -97,6 +100,40 @@ async def get_current_user(
     return payload
 
 
+async def get_current_user_from_cookie(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """현재 인증된 사용자 반환 (httpOnly 쿠키 사용 - 일반 회원용)"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="인증 정보가 유효하지 않습니다",
+    )
+
+    token = request.cookies.get(USER_TOKEN_COOKIE)
+    if not token:
+        raise credentials_exception
+
+    # 사용자 토큰은 JWT_SECRET_KEY로 검증
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+    except JWTError:
+        raise credentials_exception
+
+    user_id: Optional[str] = payload.get("sub")
+    if user_id is None:
+        raise credentials_exception
+
+    # payload에 id 필드 추가 (기존 코드 호환성)
+    payload["id"] = int(user_id)
+
+    return payload
+
+
 async def get_current_admin(
     current_user: dict[str, Any] = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -108,3 +145,24 @@ async def get_current_admin(
             detail="관리자 권한이 필요합니다",
         )
     return current_user
+
+
+# Optional bearer scheme (auto_error=False)
+bearer_scheme_optional = HTTPBearer(auto_error=False)
+
+
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme_optional),
+    db: Session = Depends(get_db),
+) -> Optional[dict[str, Any]]:
+    """현재 인증된 사용자 반환 (선택적 - 비로그인 허용)"""
+    if credentials is None:
+        return None
+
+    token = credentials.credentials
+    payload = verify_token(token)
+
+    if payload is None:
+        return None
+
+    return payload

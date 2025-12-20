@@ -1,19 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 type PaymentStatus = 'all' | 'completed' | 'cancelled' | 'refunded';
 
 interface Payment {
-  id: string;
-  orderId: string;
-  productName: string;
+  id: number;
+  order_id: string;
   amount: number;
-  paymentMethod: string;
-  status: PaymentStatus;
-  statusText: string;
-  paidAt: string;
-  cardInfo?: string;
+  paid_amount: number;
+  method: string;
+  status: string;
+  description: string | null;
+  paid_at: string | null;
+  created_at: string;
 }
 
 const statusTabs: { key: PaymentStatus; label: string }[] = [
@@ -23,64 +24,102 @@ const statusTabs: { key: PaymentStatus; label: string }[] = [
   { key: 'refunded', label: '환불' },
 ];
 
-// 임시 데이터
-const payments: Payment[] = [
-  {
-    id: '1',
-    orderId: 'ORD-2024011501',
-    productName: '원피스 루피 기어5 피규어 1/6 스케일',
-    amount: 125000,
-    paymentMethod: 'card',
-    status: 'completed',
-    statusText: '결제 완료',
-    paidAt: '2024-01-15 14:30',
-    cardInfo: '신한카드 ****1234',
-  },
-  {
-    id: '2',
-    orderId: 'ORD-2024011401',
-    productName: '드래곤볼 손오공 울트라 인스팅트 피규어',
-    amount: 89000,
-    paymentMethod: 'card',
-    status: 'completed',
-    statusText: '결제 완료',
-    paidAt: '2024-01-14 10:15',
-    cardInfo: '카카오페이',
-  },
-  {
-    id: '3',
-    orderId: 'ORD-2024010801',
-    productName: '블리치 이치고 피규어',
-    amount: 78000,
-    paymentMethod: 'card',
-    status: 'refunded',
-    statusText: '환불 완료',
-    paidAt: '2024-01-08 16:45',
-    cardInfo: '토스페이',
-  },
-];
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export default function PaymentsPage() {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<PaymentStatus>('all');
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredPayments = activeTab === 'all'
-    ? payments
-    : payments.filter(payment => payment.status === activeTab);
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchPayments = async () => {
+      setIsLoading(true);
+      try {
+        const statusParam = activeTab !== 'all' ? `&status=${activeTab}` : '';
+        const response = await fetch(
+          `${BACKEND_URL}/api/users/me/payments?page=1&page_size=50${statusParam}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('결제 내역을 불러오는데 실패했습니다.');
+        }
+
+        const data = await response.json();
+        setPayments(data.data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, [token, activeTab]);
 
   const formatPrice = (price: number) => price.toLocaleString('ko-KR');
 
-  const getStatusColor = (status: PaymentStatus) => {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed': return '결제 완료';
+      case 'cancelled': return '취소';
+      case 'refunded': return '환불 완료';
+      case 'pending': return '결제 대기';
+      case 'failed': return '결제 실패';
+      default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-700';
       case 'cancelled': return 'bg-gray-100 text-gray-700';
       case 'refunded': return 'bg-orange-100 text-orange-700';
+      case 'pending': return 'bg-yellow-100 text-yellow-700';
+      case 'failed': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getMethodText = (method: string) => {
+    switch (method) {
+      case 'kakaopay': return '카카오페이';
+      case 'tosspay': return '토스페이';
+      case 'card': return '신용카드';
+      default: return method;
     }
   };
 
   const totalAmount = payments
     .filter(p => p.status === 'completed')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + p.paid_amount, 0);
+
+  if (!token) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-gray-500">로그인이 필요합니다.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -93,7 +132,7 @@ export default function PaymentsPage() {
         <div className="mt-4 p-4 bg-gradient-to-r from-purple-50 to-cyan-50 rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">이번 달 결제 금액</p>
+              <p className="text-sm text-gray-500">총 결제 금액</p>
               <p className="text-2xl font-bold text-purple-600">{formatPrice(totalAmount)}원</p>
             </div>
             <div className="text-right">
@@ -126,7 +165,16 @@ export default function PaymentsPage() {
 
         {/* 결제 목록 */}
         <div className="divide-y divide-gray-100">
-          {filteredPayments.length === 0 ? (
+          {isLoading ? (
+            <div className="py-16 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto"></div>
+              <p className="text-gray-500 mt-4">로딩 중...</p>
+            </div>
+          ) : error ? (
+            <div className="py-16 text-center">
+              <p className="text-red-500">{error}</p>
+            </div>
+          ) : payments.length === 0 ? (
             <div className="py-16 text-center">
               <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,7 +184,7 @@ export default function PaymentsPage() {
               <p className="text-gray-500">결제 내역이 없습니다</p>
             </div>
           ) : (
-            filteredPayments.map((payment) => (
+            payments.map((payment) => (
               <div key={payment.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -162,21 +210,21 @@ export default function PaymentsPage() {
 
                     {/* 정보 */}
                     <div>
-                      <p className="font-medium text-gray-900">{payment.productName}</p>
+                      <p className="font-medium text-gray-900">{payment.description || payment.order_id}</p>
                       <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                        <span>{payment.paidAt}</span>
+                        <span>{payment.paid_at ? formatDate(payment.paid_at) : formatDate(payment.created_at)}</span>
                         <span className="text-gray-300">|</span>
-                        <span>{payment.cardInfo}</span>
+                        <span>{getMethodText(payment.method)}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="text-right">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mb-1 ${getStatusColor(payment.status)}`}>
-                      {payment.statusText}
+                      {getStatusText(payment.status)}
                     </span>
                     <p className={`text-lg font-bold ${payment.status === 'refunded' ? 'text-orange-600' : 'text-gray-900'}`}>
-                      {payment.status === 'refunded' ? '-' : ''}{formatPrice(payment.amount)}원
+                      {payment.status === 'refunded' ? '-' : ''}{formatPrice(payment.paid_amount)}원
                     </p>
                   </div>
                 </div>

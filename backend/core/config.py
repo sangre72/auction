@@ -24,8 +24,14 @@ class Settings(BaseSettings):
 
     # JWT 설정
     SECRET_KEY: str = "your-secret-key-change-in-production"
+    JWT_SECRET_KEY: str = "your-jwt-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24시간
+
+    # 일반 회원 로그인 설정
+    ENABLE_EMAIL_LOGIN: bool = True  # 이메일/비밀번호 로그인 사용 여부
+    ENABLE_REGISTRATION: bool = True  # 회원가입 허용 여부
 
     # CORS
     FRONTEND_URL: str = "http://localhost:3001"

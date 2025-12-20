@@ -121,6 +121,9 @@ importers:
       '@auction/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@portone/browser-sdk':
+        specifier: ^0.1.1
+        version: 0.1.1
       framer-motion:
         specifier: ^12.23.26
         version: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -574,6 +577,9 @@ packages:
   '@nolyfill/is-core-module@1.0.39':
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
+
+  '@portone/browser-sdk@0.1.1':
+    resolution: {integrity: sha512-5s3153gfgkICYqEo4KKZNIQLTfUBd7vTf0r4+Z8G1B8CQU2mwUw7VVUtdFDhnfABa1TvftErnME6FIgr2sApKQ==}
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -3339,6 +3345,8 @@ snapshots:
       fastq: 1.19.1
 
   '@nolyfill/is-core-module@1.0.39': {}
+
+  '@portone/browser-sdk@0.1.1': {}
 
   '@radix-ui/number@1.1.1': {}
 

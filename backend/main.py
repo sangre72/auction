@@ -12,11 +12,14 @@ from core.database import init_db
 
 # 라우터 임포트
 from auth.router import router as auth_router
+from auth.user_router import router as user_auth_router
 from users.router import router as users_router
+from users.my_router import router as my_router
 from products.router import router as products_router
 from products.public_router import router as public_products_router
 from products.ws_router import router as products_ws_router
 from payments.router import router as payments_router
+from payments.public_router import router as public_payments_router
 from points.router import router as points_router
 from banners.router import router as banners_router
 from visitors.router import router as visitors_router
@@ -54,11 +57,14 @@ app.add_middleware(
 
 # API 라우터 등록
 app.include_router(auth_router, prefix="/api")
+app.include_router(user_auth_router, prefix="/api")  # 일반 회원 인증
 app.include_router(users_router, prefix="/api")
+app.include_router(my_router, prefix="/api")  # 마이페이지 API
 app.include_router(products_router, prefix="/api")
 app.include_router(public_products_router, prefix="/api")  # 공개 상품 API
 app.include_router(products_ws_router)  # 상품 대기열 WebSocket
 app.include_router(payments_router, prefix="/api")
+app.include_router(public_payments_router, prefix="/api")  # 공개 결제 API
 app.include_router(points_router, prefix="/api")
 app.include_router(banners_router, prefix="/api")
 app.include_router(visitors_router, prefix="/api")

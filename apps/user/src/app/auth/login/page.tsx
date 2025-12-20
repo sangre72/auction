@@ -1,7 +1,12 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 type Provider = 'kakao' | 'naver' | 'google' | 'apple' | 'facebook' | 'twitter' | 'line' | 'github';
 
@@ -138,8 +143,44 @@ const providers: ProviderInfo[] = [
 ];
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleSocialLogin = (provider: Provider) => {
     window.location.href = `/api/auth/${provider}`;
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/user/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // httpOnly 쿠키 사용
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || '로그인에 실패했습니다.');
+      }
+
+      // 홈으로 이동 (토큰은 쿠키에 자동 저장됨)
+      router.push('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // 한국 서비스
@@ -162,6 +203,66 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900">피규어 경매</h1>
             <p className="text-gray-500 mt-2">간편하게 로그인하고 경매에 참여하세요</p>
+          </div>
+
+          {/* 이메일 로그인 폼 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
+            <h2 className="text-sm font-medium text-gray-700 mb-4 text-center">이메일로 로그인</h2>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+              <div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
+                  placeholder="이메일"
+                />
+              </div>
+
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-gray-900 placeholder:text-gray-400"
+                  placeholder="비밀번호"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-semibold rounded-xl hover:from-purple-500 hover:to-fuchsia-500 transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? '로그인 중...' : '로그인'}
+              </button>
+            </form>
+
+            <p className="mt-4 text-center text-sm text-gray-500">
+              계정이 없으신가요?{' '}
+              <Link href="/register" className="text-purple-600 hover:text-purple-700 font-medium">
+                회원가입
+              </Link>
+            </p>
+          </div>
+
+          {/* 구분선 */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-gray-50 text-gray-500">또는 소셜 로그인</span>
+            </div>
           </div>
 
           {/* 소셜 로그인 버튼들 */}

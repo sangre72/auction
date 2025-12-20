@@ -24,31 +24,11 @@ const menuSections: MenuSection[] = [
     items: [
       {
         id: 'orders',
-        label: '주문/배송 조회',
+        label: '구매 내역',
         href: '/mypage/orders',
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>
-        ),
-      },
-      {
-        id: 'bids',
-        label: '입찰 내역',
-        href: '/mypage/bids',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'won',
-        label: '낙찰 내역',
-        href: '/mypage/won',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         ),
       },
@@ -59,16 +39,6 @@ const menuSections: MenuSection[] = [
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'wishlist',
-        label: '관심 상품',
-        href: '/mypage/wishlist',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
         ),
       },
@@ -105,16 +75,6 @@ const menuSections: MenuSection[] = [
         icon: (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'coupons',
-        label: '쿠폰',
-        href: '/mypage/coupons',
-        icon: (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
           </svg>
         ),
       },
@@ -177,13 +137,13 @@ export default function MyPageLayout({
                   </div>
                   <div className="mt-4 flex gap-4 text-center">
                     <div className="flex-1">
-                      <p className="text-lg font-bold text-purple-600">5,000</p>
+                      <p className="text-lg font-bold text-purple-600">0</p>
                       <p className="text-xs text-gray-500">포인트</p>
                     </div>
                     <div className="w-px bg-gray-200" />
                     <div className="flex-1">
-                      <p className="text-lg font-bold text-cyan-600">3</p>
-                      <p className="text-xs text-gray-500">쿠폰</p>
+                      <p className="text-lg font-bold text-cyan-600">0</p>
+                      <p className="text-xs text-gray-500">구매</p>
                     </div>
                   </div>
                 </div>

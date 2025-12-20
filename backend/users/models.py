@@ -51,6 +51,9 @@ class User(Base):
     nickname = Column(String(100), nullable=True)
     profile_image = Column(String(500), nullable=True)
 
+    # === 인증 정보 ===
+    password_hash = Column(String(255), nullable=True)  # 이메일 로그인용 비밀번호
+
     # === 소셜 로그인 ===
     provider = Column(String(20), default=AuthProvider.EMAIL.value, index=True)
     provider_id = Column(String(255), nullable=True, index=True)
@@ -75,6 +78,10 @@ class User(Base):
     status = Column(String(20), default=UserStatus.ACTIVE.value, index=True)
     is_verified = Column(Boolean, default=False)
     status_reason = Column(String(255), nullable=True)  # 정지 사유 등
+
+    # === 로그인 시도 제한 ===
+    failed_login_count = Column(Integer, default=0)  # 연속 로그인 실패 횟수
+    locked_at = Column(DateTime(timezone=True), nullable=True)  # 계정 잠금 시간
 
     # === 포인트 ===
     point_balance = Column(Integer, default=0)

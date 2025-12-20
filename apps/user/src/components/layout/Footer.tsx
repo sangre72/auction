@@ -42,8 +42,8 @@ export function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">서비스</h4>
             <ul className="space-y-2">
-              <li><Link href="/auctions" className="text-sm hover:text-white transition-colors">경매</Link></li>
-              <li><Link href="/buy-now" className="text-sm hover:text-white transition-colors">즉시구매</Link></li>
+              <li><Link href="/" className="text-sm hover:text-white transition-colors">경매</Link></li>
+              <li><Link href="/used" className="text-sm hover:text-white transition-colors">중고거래</Link></li>
               <li><Link href="/events" className="text-sm hover:text-white transition-colors">이벤트</Link></li>
               <li><Link href="/guide" className="text-sm hover:text-white transition-colors">이용가이드</Link></li>
             </ul>
