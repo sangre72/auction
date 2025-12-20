@@ -155,7 +155,7 @@ async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme_optional),
     db: Session = Depends(get_db),
 ) -> Optional[dict[str, Any]]:
-    """현재 인증된 사용자 반환 (선택적 - 비로그인 허용)"""
+    """현재 인증된 사용자 반환 (선택적 - 비로그인 허용, Authorization 헤더)"""
     if credentials is None:
         return None
 
@@ -164,5 +164,33 @@ async def get_current_user_optional(
 
     if payload is None:
         return None
+
+    return payload
+
+
+async def get_current_user_from_cookie_optional(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Optional[dict[str, Any]]:
+    """현재 인증된 사용자 반환 (선택적 - 비로그인 허용, httpOnly 쿠키)"""
+    token = request.cookies.get(USER_TOKEN_COOKIE)
+    if not token:
+        return None
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+    except JWTError:
+        return None
+
+    user_id: Optional[str] = payload.get("sub")
+    if user_id is None:
+        return None
+
+    # payload에 id 필드 추가 (기존 코드 호환성)
+    payload["id"] = int(user_id)
 
     return payload

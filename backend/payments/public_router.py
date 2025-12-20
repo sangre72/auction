@@ -9,7 +9,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 
 from core.database import get_db
-from core.security import get_current_user_optional
+from core.security import get_current_user_from_cookie_optional
 from common.responses import SuccessResponse
 from .models import Payment, PaymentStatus
 from products.models import Product, ProductSlot, SlotStatus
@@ -40,7 +40,7 @@ class SlotPurchaseResponse(BaseModel):
 async def complete_purchase(
     request: SlotPurchaseRequest,
     db: Session = Depends(get_db),
-    current_user: Optional[dict] = Depends(get_current_user_optional),
+    current_user: Optional[dict] = Depends(get_current_user_from_cookie_optional),
 ):
     """
     결제 완료 처리

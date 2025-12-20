@@ -10,7 +10,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from core.database import get_db
-from core.security import get_current_user
+from core.security import get_current_user_from_cookie
 from common.responses import SuccessResponse, PaginatedResponse, PaginationMeta
 from payments.models import Payment
 from products.models import Product, ProductSlot
@@ -64,7 +64,7 @@ async def get_my_payments(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user_from_cookie),
     db: Session = Depends(get_db),
 ):
     """
@@ -118,7 +118,7 @@ async def get_my_payments(
 async def get_my_purchases(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user_from_cookie),
     db: Session = Depends(get_db),
 ):
     """
@@ -204,7 +204,7 @@ async def get_my_purchases(
 
 @router.get("/purchases/summary", response_model=SuccessResponse[dict])
 async def get_my_purchases_summary(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user_from_cookie),
     db: Session = Depends(get_db),
 ):
     """

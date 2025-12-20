@@ -55,10 +55,15 @@ export async function POST(request: NextRequest) {
         try {
           // 보안: 실제 결제된 금액(paidAmount)을 백엔드에 전달
           // 백엔드에서 슬롯가격 * 슬롯수와 비교하여 검증
+
+          // 클라이언트의 쿠키를 백엔드로 전달
+          const cookies = request.headers.get('cookie') || '';
+
           const backendResponse = await fetch(`${BACKEND_URL}/api/public/payments/complete`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Cookie': cookies, // 쿠키 전달
             },
             body: JSON.stringify({
               order_id: paymentId,

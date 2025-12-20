@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import Link from 'next/link';
 
 type PaymentStatus = 'all' | 'completed' | 'cancelled' | 'refunded';
 
@@ -27,15 +27,13 @@ const statusTabs: { key: PaymentStatus; label: string }[] = [
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export default function PaymentsPage() {
-  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<PaymentStatus>('all');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-
     const fetchPayments = async () => {
       setIsLoading(true);
       try {
@@ -43,16 +41,20 @@ export default function PaymentsPage() {
         const response = await fetch(
           `${BACKEND_URL}/api/users/me/payments?page=1&page_size=50${statusParam}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: 'include', // httpOnly 쿠키 사용
           }
         );
+
+        if (response.status === 401) {
+          setIsAuthenticated(false);
+          return;
+        }
 
         if (!response.ok) {
           throw new Error('결제 내역을 불러오는데 실패했습니다.');
         }
 
+        setIsAuthenticated(true);
         const data = await response.json();
         setPayments(data.data || []);
       } catch (err) {
@@ -63,7 +65,7 @@ export default function PaymentsPage() {
     };
 
     fetchPayments();
-  }, [token, activeTab]);
+  }, [activeTab]);
 
   const formatPrice = (price: number) => price.toLocaleString('ko-KR');
 
@@ -113,10 +115,18 @@ export default function PaymentsPage() {
     .filter(p => p.status === 'completed')
     .reduce((sum, p) => sum + p.paid_amount, 0);
 
-  if (!token) {
+  if (!isLoading && !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-gray-500">로그인이 필요합니다.</p>
+        <div className="text-center">
+          <p className="text-gray-500 mb-4">로그인이 필요합니다.</p>
+          <Link
+            href="/auth/login"
+            className="inline-block px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            로그인하기
+          </Link>
+        </div>
       </div>
     );
   }
