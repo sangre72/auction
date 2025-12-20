@@ -94,12 +94,26 @@ docs(readme): update installation guide
 ## 사용 가능한 스킬
 
 ### /gitpush
-변경사항을 자동 분석하여 Conventional Commits 형식으로 커밋하고 push합니다.
+변경사항을 자동 분석하여 Conventional Commits 형식으로 커밋하고, dev 브랜치 merge 후 push합니다.
 
 ```bash
 # 사용법
 /gitpush
 ```
+
+### /gitpull
+dev 브랜치가 있으면 pull 후 현재 브랜치에 merge하고, 현재 브랜치도 pull합니다.
+
+```bash
+# 사용법
+/gitpull
+```
+
+**실행 순서:**
+1. 변경사항이 있으면 자동 stash
+2. dev 브랜치 pull → 현재 브랜치에 merge
+3. 현재 브랜치 pull
+4. stash 복원
 
 ### /oauth-social-auth
 카카오, 네이버, 구글 소셜 로그인 OAuth 코드를 자동 생성합니다.
