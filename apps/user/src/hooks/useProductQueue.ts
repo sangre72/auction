@@ -33,8 +33,54 @@ export function useProductQueue({
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectRef = useRef<NodeJS.Timeout | null>(null);
+  const onEnterAllowedRef = useRef(onEnterAllowed);
 
-  const connect = useCallback(() => {
+  // 콜백 ref 업데이트
+  useEffect(() => {
+    onEnterAllowedRef.current = onEnterAllowed;
+  }, [onEnterAllowed]);
+
+  const disconnect = useCallback(() => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+
+    if (reconnectRef.current) {
+      clearTimeout(reconnectRef.current);
+      reconnectRef.current = null;
+    }
+
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'leave' }));
+      }
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    setState({
+      isConnected: false,
+      isAllowed: false,
+      position: 0,
+      message: '',
+      queueList: null,
+    });
+  }, []);
+
+  const leave = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'leave' }));
+    }
+  }, []);
+
+  // WebSocket 연결 및 메시지 처리
+  useEffect(() => {
+    if (!autoConnect || !productId || !userId) {
+      return;
+    }
+
+    // 이미 연결된 경우 스킵
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -45,6 +91,9 @@ export function useProductQueue({
 
     ws.onopen = () => {
       setState((prev) => ({ ...prev, isConnected: true }));
+
+      // 연결 즉시 대기열 목록 요청
+      ws.send(JSON.stringify({ type: 'get_queue_list' }));
 
       // Heartbeat 시작
       heartbeatRef.current = setInterval(() => {
@@ -88,7 +137,7 @@ export function useProductQueue({
               duration: 3000,
             });
 
-            onEnterAllowed?.(data.product_id);
+            onEnterAllowedRef.current?.(data.product_id);
             break;
 
           case 'queue_update':
@@ -130,13 +179,6 @@ export function useProductQueue({
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
-
-      // 자동 재연결 (5초 후)
-      if (autoConnect) {
-        reconnectRef.current = setTimeout(() => {
-          connect();
-        }, 5000);
-      }
     };
 
     ws.onerror = (error) => {
@@ -144,52 +186,36 @@ export function useProductQueue({
     };
 
     wsRef.current = ws;
-  }, [productId, userId, onEnterAllowed, autoConnect]);
-
-  const disconnect = useCallback(() => {
-    if (heartbeatRef.current) {
-      clearInterval(heartbeatRef.current);
-      heartbeatRef.current = null;
-    }
-
-    if (reconnectRef.current) {
-      clearTimeout(reconnectRef.current);
-      reconnectRef.current = null;
-    }
-
-    if (wsRef.current) {
-      // 명시적 퇴장 메시지 전송
-      if (wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: 'leave' }));
-      }
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
-    setState({
-      isConnected: false,
-      isAllowed: false,
-      position: 0,
-      message: '',
-      queueList: null,
-    });
-  }, []);
-
-  const leave = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'leave' }));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (autoConnect && productId && userId) {
-      connect();
-    }
 
     return () => {
-      disconnect();
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+
+      if (reconnectRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
+
+      if (wsRef.current) {
+        if (wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'leave' }));
+        }
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
-  }, [productId, userId, autoConnect, connect, disconnect]);
+  }, [productId, userId, autoConnect]);
+
+  // 수동 연결 함수 (외부에서 호출 가능)
+  const connect = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      return;
+    }
+    // autoConnect가 true이면 useEffect에서 자동 연결됨
+    // 수동 연결이 필요한 경우 이 함수 확장 가능
+  }, []);
 
   return {
     ...state,

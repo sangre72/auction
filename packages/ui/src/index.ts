@@ -36,6 +36,7 @@ export {
   DropdownMenuRadioGroup,
 } from './components/dropdown-menu';
 export { Separator } from './components/separator';
+export { SessionTimeoutModal } from './components/session-timeout-modal';
 
 // Utilities
 export { cn } from './lib/utils';

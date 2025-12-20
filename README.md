@@ -335,6 +335,54 @@ Client ID와 Client Secret이 올바른지, 환경 변수가 제대로 로드되
 
 에러 처리에 대한 자세한 내용은 [ERROR_HANDLING.md](ERROR_HANDLING.md)를 참조하세요.
 
+## TODO (향후 개선 사항)
+
+### 대기열 시스템 아키텍처 개선
+
+현재 WebSocket 기반 대기열 시스템은 약 2,000개 동시 연결까지 지원합니다. 대규모 트래픽 처리를 위해 다음 아키텍처 개선을 검토합니다.
+
+#### Option 1: Polling + SSE 하이브리드 (권장)
+
+```
+[사용자] → [Polling 5초] → [API 서버] → [Redis Queue]
+              ↓
+         position <= 10이면
+              ↓
+[사용자] ← [SSE 실시간] ← [API 서버]
+```
+
+**장점:**
+- WebSocket 연결 수 80% 감소
+- 기존 인프라 활용 가능
+- 점진적 마이그레이션 가능
+
+**구현 포인트:**
+- 대기 순서 10번 이내일 때만 SSE 연결
+- Redis를 이용한 대기열 상태 관리
+- 폴링 간격 동적 조절 (순서가 가까워지면 짧게)
+
+#### Option 2: 대기열 마이크로서비스 분리
+
+```
+[API 서버] ←→ [Queue Service] ←→ [Redis Cluster]
+                    ↓
+            [Socket.IO Server]
+                    ↓
+               [사용자들]
+```
+
+**장점:**
+- 10,000+ 동시 연결 지원
+- 대기열 로직 독립적 스케일링
+- 장애 격리
+
+**구현 포인트:**
+- Socket.IO + Redis Adapter 사용
+- Kubernetes HPA로 자동 스케일링
+- 대기열 서비스 별도 배포
+
+---
+
 ## 라이선스
 
 MIT

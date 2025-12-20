@@ -25,17 +25,25 @@ export default function AuctionDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [userId, setUserId] = useState<string>('');
+  // userId를 동기적으로 초기화 (SSR에서는 빈 문자열, 클라이언트에서는 즉시 값 설정)
+  const [userId, setUserId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return getUserId();
+    }
+    return '';
+  });
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [completedPaymentId, setCompletedPaymentId] = useState<string | null>(null);
 
-  // 클라이언트에서만 userId 초기화
+  // SSR에서 빈 문자열로 시작했다면 클라이언트에서 다시 설정
   useEffect(() => {
-    setUserId(getUserId());
-  }, []);
+    if (!userId) {
+      setUserId(getUserId());
+    }
+  }, [userId]);
 
   // 대기 중인 결제가 있으면 확인
   useEffect(() => {

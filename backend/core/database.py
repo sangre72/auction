@@ -48,5 +48,6 @@ def init_db() -> None:
     from points.models import PointHistory
     from banners.models import Banner
     from visitors.models import Visitor, DailyStats
+    from wishlist.models import Wishlist
 
     Base.metadata.create_all(bind=engine)

@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import Image from 'next/image';
+import { useState, useEffect, useCallback } from 'react';
 import { useQueue } from '@/contexts/QueueContext';
 import { formatPrice } from '@auction/shared';
 
@@ -19,6 +18,8 @@ interface AuctionCardProps {
   onLike?: (id: string) => void;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
 export function AuctionCard({
   id,
   title,
@@ -33,12 +34,33 @@ export function AuctionCard({
   onLike,
 }: AuctionCardProps) {
   const [liked, setLiked] = useState(isLiked);
+  const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const { joinQueue, getQueueEntry } = useQueue();
 
   const queueEntry = getQueueEntry(Number(id));
   const isInQueue = queueEntry && !queueEntry.isAllowed;
+
+  // 관심 상품 여부 확인 (마운트 시)
+  const checkWishlistStatus = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/users/me/wishlist/${id}/check`,
+        { credentials: 'include' }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setLiked(data.data.is_wishlisted);
+      }
+    } catch {
+      // 비로그인 상태에서는 무시
+    }
+  }, [id]);
+
+  useEffect(() => {
+    checkWishlistStatus();
+  }, [checkWishlistStatus]);
 
   const handleCardClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -52,11 +74,35 @@ export function AuctionCard({
     }
   };
 
-  const handleLike = (e: React.MouseEvent) => {
+  const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setLiked(!liked);
-    onLike?.(id);
+
+    if (isLikeLoading) return;
+    setIsLikeLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/users/me/wishlist/${id}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setLiked(data.data.is_wishlisted);
+        onLike?.(id);
+      } else if (response.status === 401) {
+        // 비로그인 상태 - 로그인 페이지로 이동하거나 알림
+        alert('로그인이 필요합니다');
+      }
+    } catch (error) {
+      console.error('Failed to toggle wishlist:', error);
+    } finally {
+      setIsLikeLoading(false);
+    }
   };
 
   const getTimeRemaining = () => {
@@ -99,25 +145,33 @@ export function AuctionCard({
           {/* 관심 버튼 */}
           <button
             onClick={handleLike}
+            disabled={isLikeLoading}
             className={`absolute top-3 right-3 p-2.5 rounded-full transition-all ${
               liked
                 ? 'bg-red-500 text-white'
                 : 'bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white hover:text-red-500'
-            }`}
+            } ${isLikeLoading ? 'opacity-50' : ''}`}
           >
-            <svg
-              className="w-5 h-5"
-              fill={liked ? 'currentColor' : 'none'}
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
+            {isLikeLoading ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg
+                className="w-5 h-5"
+                fill={liked ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+            )}
           </button>
 
           {/* 대기열 상태 뱃지 */}
@@ -174,7 +228,7 @@ export function AuctionCard({
               </span>
               {discountRate > 0 && (
                 <span className="text-sm font-medium text-red-500">
-                  {discountRate}%↑
+                  {discountRate}%
                 </span>
               )}
             </div>
