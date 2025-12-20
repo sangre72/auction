@@ -1,0 +1,385 @@
+{
+  "name": "OAuth Social Login Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "oauth-callback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook - OAuth Callback",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "oauth-social-login"
+    },
+    {
+      "parameters": {
+        "functionCode": "// OAuth 콜백 데이터 파싱\nconst body = $input.item.json.body;\n\nreturn {\n  json: {\n    event: 'user_login',\n    provider: body.provider,\n    userId: body.user.id,\n    email: body.user.email,\n    name: body.user.name,\n    profileImage: body.user.profileImage,\n    timestamp: new Date().toISOString(),\n    metadata: {\n      userAgent: $input.item.json.headers['user-agent'],\n      ip: $input.item.json.headers['x-forwarded-for'] || $input.item.json.headers['x-real-ip']\n    }\n  }\n};"
+      },
+      "name": "Parse OAuth Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.provider}}",
+              "operation": "equals",
+              "value2": "kakao"
+            }
+          ]
+        }
+      },
+      "name": "Is Kakao?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.provider}}",
+              "operation": "equals",
+              "value2": "naver"
+            }
+          ]
+        }
+      },
+      "name": "Is Naver?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.provider}}",
+              "operation": "equals",
+              "value2": "google"
+            }
+          ]
+        }
+      },
+      "name": "Is Google?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "channel": "#oauth-alerts",
+        "text": "🟡 새로운 카카오 로그인\n사용자: {{$json.name}}\n이메일: {{$json.email}}\nID: {{$json.userId}}",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "name": "Slack - Kakao Login",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [850, 150],
+      "credentials": {
+        "slackApi": {
+          "id": "1",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "#oauth-alerts",
+        "text": "🟢 새로운 네이버 로그인\n사용자: {{$json.name}}\n이메일: {{$json.email}}\nID: {{$json.userId}}",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "name": "Slack - Naver Login",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "slackApi": {
+          "id": "1",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "#oauth-alerts",
+        "text": "🔴 새로운 구글 로그인\n사용자: {{$json.name}}\n이메일: {{$json.email}}\nID: {{$json.userId}}",
+        "attachments": [],
+        "otherOptions": {}
+      },
+      "name": "Slack - Google Login",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [850, 450],
+      "credentials": {
+        "slackApi": {
+          "id": "1",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "1234567890",
+        "range": "Users!A:F",
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        }
+      },
+      "name": "Google Sheets - Add User",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 2,
+      "position": [1050, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://your-api.com/users",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "provider",
+              "value": "={{$json.provider}}"
+            },
+            {
+              "name": "userId",
+              "value": "={{$json.userId}}"
+            },
+            {
+              "name": "email",
+              "value": "={{$json.email}}"
+            },
+            {
+              "name": "name",
+              "value": "={{$json.name}}"
+            },
+            {
+              "name": "profileImage",
+              "value": "={{$json.profileImage}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "HTTP Request - Save to Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 150],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "3",
+          "name": "API Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "email": "{{$json.email}}",
+        "listId": "12345",
+        "updateExisting": true,
+        "additionalFields": {
+          "customFields": {
+            "field": [
+              {
+                "fieldId": "FNAME",
+                "value": "={{$json.name}}"
+              },
+              {
+                "fieldId": "PROVIDER",
+                "value": "={{$json.provider}}"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Mailchimp - Add to List",
+      "type": "n8n-nodes-base.mailchimp",
+      "typeVersion": 1,
+      "position": [1050, 450],
+      "credentials": {
+        "mailchimpApi": {
+          "id": "4",
+          "name": "Mailchimp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"User registered successfully\" } }}"
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook - OAuth Callback": {
+      "main": [
+        [
+          {
+            "node": "Parse OAuth Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse OAuth Data": {
+      "main": [
+        [
+          {
+            "node": "Is Kakao?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Naver?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Google?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Kakao?": {
+      "main": [
+        [
+          {
+            "node": "Slack - Kakao Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Naver?": {
+      "main": [
+        [
+          {
+            "node": "Slack - Naver Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Google?": {
+      "main": [
+        [
+          {
+            "node": "Slack - Google Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack - Kakao Login": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Save to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack - Naver Login": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Add User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack - Google Login": {
+      "main": [
+        [
+          {
+            "node": "Mailchimp - Add to List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Save to Database": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Add User": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mailchimp - Add to List": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "1",
+      "name": "OAuth"
+    },
+    {
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "id": "2",
+      "name": "Social Login"
+    }
+  ]
+}
