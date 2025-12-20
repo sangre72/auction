@@ -59,13 +59,37 @@ apps/*/src/
 | 타입 | `@auction/shared/types` | `src/types` | `features/*/types` |
 | 컴포넌트 | `@auction/ui` | `src/components` | `features/*/components` |
 
+### 앱별 타입 디렉토리
+
+```
+apps/user/src/types/
+├── index.ts      # export * from './auth'; export * from './queue';
+├── auth.ts       # UserProfile, AuthState, UseAuthReturn
+└── queue.ts      # QueueViewer, QueueListData
+
+apps/admin/src/types/
+├── index.ts
+├── auth.ts       # AdminCredentials, AdminSession
+└── slot.ts       # Slot (admin 전용 확장)
+```
+
+> hooks 파일 내 타입 정의 금지 → `types/` 디렉토리로 분리
+
 ## 스킬
 
 | 스킬 | 설명 |
 |------|------|
 | `/gitpush` | 변경사항 분석 → Conventional Commit → push |
 | `/gitpull` | dev 브랜치 merge → 현재 브랜치 pull |
-| `/refactor` | 모듈화 가이드라인 준수 검사 |
+| `/refactor` | 모듈화 가이드라인 준수 검사 및 수정 |
+| `/modular-check` | 모듈화 상태 분석 (수정 없이 리포트만) |
+| `/coding-guide` | 코딩 가이드라인 생성 및 CLAUDE.md 업데이트 |
+| `/gitignore` | 프로젝트별 .gitignore 생성 |
+
+### 증분 분석 원칙
+
+> **IMPORTANT**: 소스가 추가/수정된 경우, 전체가 아닌 **변경된 부분만** 분석합니다.
+> `/gitpush` 실행 전 반드시 `/refactor` 또는 `/modular-check` 실행
 
 ## 보안 라이브러리 규칙 (필수)
 
@@ -101,6 +125,7 @@ import jwt  # PyJWT 단독 - python-jose와 충돌
 
 ### 인증 쿠키 필수 설정
 
+**백엔드 (Python)**
 ```python
 response.set_cookie(
     key="token",
@@ -109,6 +134,17 @@ response.set_cookie(
     secure=True,        # HTTPS 전용 (프로덕션)
     samesite="lax",     # CSRF 방지
 )
+```
+
+**프론트엔드 (TypeScript)**
+```typescript
+// API 호출 시 반드시 credentials: 'include' 사용
+const response = await fetch(`${API_URL}/endpoint`, {
+  credentials: 'include',  // httpOnly 쿠키 자동 전송
+});
+
+// 금지: localStorage 사용
+// localStorage.setItem('token', token);  // XSS 취약!
 ```
 
 ### 취약점 방지 필수 사항
