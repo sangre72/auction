@@ -9,11 +9,12 @@
 3. [에러 처리](#에러-처리)
 4. [네이밍 컨벤션](#네이밍-컨벤션)
 5. [파일 구조](#파일-구조)
-6. [주석 및 문서화](#주석-및-문서화)
-7. [보안 규칙](#보안-규칙)
-8. [성능 최적화](#성능-최적화)
-9. [테스트](#테스트)
-10. [Git 커밋 메시지](#git-커밋-메시지)
+6. [모듈화 가이드라인](#모듈화-가이드라인)
+7. [주석 및 문서화](#주석-및-문서화)
+8. [보안 규칙](#보안-규칙)
+9. [성능 최적화](#성능-최적화)
+10. [테스트](#테스트)
+11. [Git 커밋 메시지](#git-커밋-메시지)
 
 ## TypeScript 규칙
 
@@ -388,6 +389,424 @@ export default Foo; // ❌ 둘 중 하나만
 // src/lib/auth/google.ts (100줄)
 ```
 
+## 모듈화 가이드라인
+
+> **핵심 원칙**: 프론트엔드 모듈은 **디렉토리 단위로 독립적으로 이동 가능**해야 합니다.
+> 공용 유틸리티는 **@auction/shared** 패키지에 배치합니다.
+
+### 1. 모노레포 구조
+
+```
+auction-001/
+├── apps/                    # 애플리케이션
+│   ├── admin/               # 관리자 앱
+│   └── user/                # 사용자 앱
+├── packages/                # 공유 패키지
+│   ├── shared/              # 공유 로직 및 타입
+│   │   ├── src/
+│   │   │   ├── types/       # 공유 타입 정의
+│   │   │   ├── utils/       # 공유 유틸리티
+│   │   │   └── auth/        # 공유 인증 로직
+│   │   └── package.json
+│   ├── ui/                  # 공유 UI 컴포넌트
+│   │   ├── src/components/
+│   │   └── package.json
+│   └── typescript-config/   # 공유 TypeScript 설정
+└── backend/                 # Python FastAPI 백엔드
+```
+
+### 2. 프론트엔드 모듈 독립성 규칙
+
+각 기능 모듈은 **디렉토리 하나를 통째로 이동**해도 동작해야 합니다.
+
+#### 2.1 기능 모듈 구조 (Feature Module)
+
+```
+apps/admin/src/
+├── features/                # ✅ 기능별 모듈 (권장)
+│   ├── products/            # 상품 관리 모듈
+│   │   ├── components/      # 모듈 전용 컴포넌트
+│   │   │   ├── ProductCard.tsx
+│   │   │   ├── ProductForm.tsx
+│   │   │   └── ProductPreview.tsx
+│   │   ├── hooks/           # 모듈 전용 훅
+│   │   │   └── useProducts.ts
+│   │   ├── api/             # 모듈 전용 API 함수
+│   │   │   └── productsApi.ts
+│   │   ├── types/           # 모듈 전용 타입
+│   │   │   └── product.types.ts
+│   │   ├── utils/           # 모듈 전용 유틸리티
+│   │   │   └── productHelpers.ts
+│   │   └── index.ts         # 모듈 public API
+│   ├── users/               # 사용자 관리 모듈
+│   ├── payments/            # 결제 관리 모듈
+│   └── banners/             # 배너 관리 모듈
+├── components/              # 앱 전역 공유 컴포넌트
+│   ├── layout/
+│   └── ui/
+├── lib/                     # 앱 전역 유틸리티
+│   ├── api.ts               # API 클라이언트 설정
+│   └── auth/                # 앱 인증 관련
+└── app/                     # Next.js App Router (페이지)
+    └── (dashboard)/
+        └── products/
+            └── page.tsx     # features/products 사용
+```
+
+#### 2.2 모듈 독립성 체크리스트
+
+```typescript
+// ✅ 올바른 모듈 구조 (자체 포함)
+// features/products/index.ts
+export { ProductCard } from './components/ProductCard';
+export { ProductForm } from './components/ProductForm';
+export { useProducts } from './hooks/useProducts';
+export { productsApi } from './api/productsApi';
+export type { Product, ProductFormData } from './types/product.types';
+
+// 페이지에서 사용
+// app/(dashboard)/products/page.tsx
+import { ProductCard, useProducts } from '@/features/products';
+
+// ❌ 잘못된 구조 (모듈 간 직접 참조)
+import { formatPrice } from '../payments/utils/formatPrice'; // ❌
+// → 공용 유틸이면 @auction/shared로 이동
+```
+
+#### 2.3 모듈 간 의존성 규칙
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    @auction/shared                       │
+│  (types, utils, auth - 모든 앱에서 사용)                  │
+└─────────────────────────────────────────────────────────┘
+                           ▲
+                           │ import
+┌─────────────────────────────────────────────────────────┐
+│                    @auction/ui                           │
+│  (공유 UI 컴포넌트 - Button, Card, Table 등)             │
+└─────────────────────────────────────────────────────────┘
+                           ▲
+                           │ import
+┌─────────────────────────────────────────────────────────┐
+│                  apps/admin/src/lib                      │
+│  (앱 전역 설정 - API 클라이언트, 앱 공용 유틸)            │
+└─────────────────────────────────────────────────────────┘
+                           ▲
+                           │ import
+┌─────────────────────────────────────────────────────────┐
+│                apps/admin/src/features/*                 │
+│  (기능 모듈 - 각 모듈은 서로 직접 참조 금지)              │
+└─────────────────────────────────────────────────────────┘
+                           ▲
+                           │ import
+┌─────────────────────────────────────────────────────────┐
+│                 apps/admin/src/app/*                     │
+│  (페이지 - features에서 필요한 것만 import)              │
+└─────────────────────────────────────────────────────────┘
+```
+
+**규칙**:
+- 기능 모듈(features/*)은 서로 직접 import 금지
+- 공유 필요 시 → `@auction/shared` 또는 `src/lib`로 이동
+- 하위 레이어는 상위 레이어를 알지 못함
+
+### 3. 공용 유틸리티 배치 규칙
+
+#### 3.1 @auction/shared에 배치할 것
+
+**2개 이상의 앱 또는 모듈**에서 사용되면 `@auction/shared`로 이동:
+
+```typescript
+// packages/shared/src/utils/index.ts
+
+// ✅ 문자열 처리
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+}
+
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  return local.slice(0, 2) + '***@' + domain;
+}
+
+// ✅ 숫자/가격 포맷팅
+export function formatPrice(price: number, currency = 'KRW'): string {
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency,
+  }).format(price);
+}
+
+export function formatNumber(num: number): string {
+  return new Intl.NumberFormat('ko-KR').format(num);
+}
+
+// ✅ 날짜 포맷팅
+export function formatDate(date: Date | string, format = 'YYYY-MM-DD'): string {
+  // ...
+}
+
+export function formatRelativeTime(date: Date | string): string {
+  // "3분 전", "1시간 전" 등
+}
+
+// ✅ 유효성 검사
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export function isValidPhoneNumber(phone: string): boolean {
+  return /^01[0-9]-?\d{3,4}-?\d{4}$/.test(phone);
+}
+```
+
+**사용 예시**:
+```typescript
+// apps/admin/src/features/products/components/ProductCard.tsx
+import { formatPrice, formatDate } from '@auction/shared/utils';
+
+// apps/user/src/components/ProductDetail.tsx
+import { formatPrice, formatDate } from '@auction/shared/utils';
+```
+
+#### 3.2 앱 전용 lib에 배치할 것
+
+**해당 앱에서만** 사용되는 유틸리티:
+
+```typescript
+// apps/admin/src/lib/adminUtils.ts
+
+// 관리자 앱 전용 유틸리티
+export function formatAdminLogEntry(log: AdminLog): string { }
+export function checkAdminPermission(user: AdminUser, action: string): boolean { }
+```
+
+#### 3.3 모듈 전용 utils에 배치할 것
+
+**해당 모듈에서만** 사용되는 유틸리티:
+
+```typescript
+// apps/admin/src/features/products/utils/productHelpers.ts
+
+// 상품 모듈 전용 유틸리티
+export function calculateDiscountRate(original: number, sale: number): number { }
+export function generateProductSku(category: string, id: number): string { }
+```
+
+#### 3.4 배치 결정 플로차트
+
+```
+유틸리티 함수가 필요함
+        │
+        ▼
+┌───────────────────────┐
+│ 2개 이상 앱에서 사용? │
+└───────────────────────┘
+        │
+   Yes  │  No
+        ▼        ▼
+  @auction/shared    ┌───────────────────────┐
+                     │ 2개 이상 모듈에서 사용? │
+                     └───────────────────────┘
+                             │
+                        Yes  │  No
+                             ▼        ▼
+                        src/lib     features/모듈/utils
+```
+
+### 4. 타입 정의 통합 규칙
+
+#### 4.1 타입 배치 위치
+
+| 타입 종류 | 배치 위치 | 예시 |
+|----------|----------|------|
+| API 응답/요청 타입 | `@auction/shared/types` | `Product`, `User`, `ApiResponse` |
+| 앱 전역 상태 타입 | `apps/*/src/types` | `AdminAuthState`, `UserSession` |
+| 모듈 전용 타입 | `features/*/types` | `ProductFormData`, `ProductFilter` |
+| 컴포넌트 Props | 컴포넌트 파일 내부 | `interface ProductCardProps` |
+
+#### 4.2 공유 타입 구조
+
+```typescript
+// packages/shared/src/types/index.ts
+
+// ✅ API 엔티티 타입 (백엔드와 공유)
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+  category_id: number;
+  category_name?: string;
+  status: ProductStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProductStatus = 'draft' | 'active' | 'sold' | 'closed';
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  role: UserRole;
+}
+
+export type UserRole = 'user' | 'admin' | 'super_admin';
+
+// ✅ API 응답 래퍼
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+// ✅ 권한 관련 타입
+export type AdminPermission =
+  | 'products:read' | 'products:write' | 'products:delete'
+  | 'users:read' | 'users:write' | 'users:delete'
+  | 'payments:read' | 'payments:write';
+```
+
+#### 4.3 타입 중복 금지
+
+```typescript
+// ❌ 잘못된 예 - 타입 중복 정의
+// apps/admin/src/lib/api.ts
+interface Product { id: number; name: string; }
+
+// apps/admin/src/features/products/types.ts
+interface Product { id: number; name: string; } // 중복!
+
+// ✅ 올바른 예 - 공유 타입 사용
+// apps/admin/src/lib/api.ts
+import type { Product } from '@auction/shared/types';
+
+// apps/admin/src/features/products/types.ts
+import type { Product } from '@auction/shared/types';
+
+// 모듈 전용 타입만 추가 정의
+export interface ProductFormData extends Partial<Product> {
+  images: File[];
+}
+```
+
+### 5. 컴포넌트 분류 규칙
+
+#### 5.1 컴포넌트 배치 위치
+
+| 분류 | 배치 위치 | 예시 |
+|------|----------|------|
+| 기본 UI 요소 | `@auction/ui` | `Button`, `Input`, `Card`, `Table` |
+| 앱 공용 레이아웃 | `apps/*/src/components/layout` | `Header`, `Sidebar`, `Footer` |
+| 앱 공용 컴포넌트 | `apps/*/src/components/` | `DataTable`, `SearchBar` |
+| 모듈 전용 컴포넌트 | `features/*/components` | `ProductCard`, `UserAvatar` |
+
+#### 5.2 컴포넌트 이동 기준
+
+```typescript
+// 컴포넌트가 3개 이상 모듈에서 사용되면 상위로 이동
+
+// Step 1: 모듈 전용으로 시작
+// features/products/components/PriceTag.tsx
+
+// Step 2: 2개 모듈에서 사용 → 유지 (허용)
+// features/products/components/PriceTag.tsx
+// features/orders/components/OrderItem.tsx 에서 import
+
+// Step 3: 3개+ 모듈에서 사용 → src/components로 이동
+// src/components/PriceTag.tsx
+
+// Step 4: 다른 앱에서도 필요 → @auction/ui로 이동
+// packages/ui/src/components/PriceTag.tsx
+```
+
+### 6. API 클라이언트 규칙
+
+#### 6.1 API 레이어 구조
+
+```typescript
+// packages/shared/src/api/client.ts
+// ✅ 공용 API 클라이언트 (fetch 래퍼)
+export function createApiClient(baseUrl: string, getToken?: () => string | null) {
+  return {
+    get: <T>(path: string, params?: object) => { },
+    post: <T>(path: string, body: object) => { },
+    put: <T>(path: string, body: object) => { },
+    delete: <T>(path: string) => { },
+  };
+}
+
+// apps/admin/src/lib/api.ts
+// ✅ 앱별 API 클라이언트 인스턴스
+import { createApiClient } from '@auction/shared/api';
+
+export const api = createApiClient(
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+  () => localStorage.getItem('admin_token')
+);
+
+// apps/admin/src/features/products/api/productsApi.ts
+// ✅ 모듈별 API 함수
+import { api } from '@/lib/api';
+import type { Product } from '@auction/shared/types';
+
+export const productsApi = {
+  getList: (params?: ProductListParams) =>
+    api.get<PaginatedResponse<Product>>('/products', params),
+  getById: (id: number) =>
+    api.get<Product>(`/products/${id}`),
+  create: (data: ProductCreateData) =>
+    api.post<Product>('/products', data),
+};
+```
+
+### 7. 모듈화 체크리스트
+
+새 기능 개발 또는 리팩토링 시 확인:
+
+| 항목 | 확인 |
+|------|------|
+| 모듈이 디렉토리 단위로 독립적인가? | ☐ |
+| 다른 기능 모듈을 직접 import하지 않는가? | ☐ |
+| 공용 유틸리티가 올바른 위치에 있는가? | ☐ |
+| 타입이 중복 정의되어 있지 않은가? | ☐ |
+| 컴포넌트가 적절한 레벨에 배치되어 있는가? | ☐ |
+| index.ts로 public API가 정의되어 있는가? | ☐ |
+
+### 8. 마이그레이션 가이드
+
+기존 코드를 모듈화 구조로 마이그레이션하는 단계:
+
+```bash
+# 1. features 디렉토리 생성
+mkdir -p apps/admin/src/features/products/{components,hooks,api,types,utils}
+
+# 2. 관련 파일 이동
+mv apps/admin/src/components/products/* apps/admin/src/features/products/components/
+
+# 3. index.ts 생성 (public API 정의)
+# apps/admin/src/features/products/index.ts
+export { ProductCard } from './components/ProductCard';
+export { useProducts } from './hooks/useProducts';
+
+# 4. import 경로 업데이트
+# 기존: import { ProductCard } from '@/components/products/ProductCard';
+# 변경: import { ProductCard } from '@/features/products';
+
+# 5. 공용 유틸리티 추출
+# 2개+ 모듈에서 사용하는 유틸리티 → @auction/shared/utils로 이동
+```
+
 ## 주석 및 문서화
 
 ### 1. JSDoc
@@ -440,6 +859,8 @@ if (state !== savedState) { } // ❌
 
 ## 보안 규칙
 
+> **중요**: 모든 코드 작성 시 보안을 최우선으로 고려해야 합니다. OWASP Top 10 취약점을 반드시 방어해야 하며, 보안 검토 없이 프로덕션 배포는 금지됩니다.
+
 ### 1. 환경 변수
 
 ```typescript
@@ -470,7 +891,7 @@ logError(error, {
 });
 ```
 
-### 3. SQL Injection 방지
+### 3. SQL Injection 방지 (A03:2021)
 
 ```typescript
 // ✅ Parameterized query
@@ -483,9 +904,14 @@ const user = await db.query(
 const user = await db.query(
   `SELECT * FROM users WHERE id = '${userId}'` // ❌
 );
+
+// ✅ ORM 사용 시 (Prisma)
+const user = await prisma.user.findUnique({
+  where: { id: userId }
+});
 ```
 
-### 4. XSS 방지
+### 4. XSS 방지 (A03:2021)
 
 ```typescript
 // ✅ React는 기본적으로 escape
@@ -498,6 +924,247 @@ const user = await db.query(
 import DOMPurify from 'dompurify';
 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userInput) }} />
 ```
+
+### 5. 인증 및 세션 관리 (A07:2021)
+
+```typescript
+// ✅ 안전한 쿠키 설정
+cookies.set('session', token, {
+  httpOnly: true,       // JavaScript 접근 차단 (XSS 방어)
+  secure: true,         // HTTPS만 전송
+  sameSite: 'strict',   // CSRF 방어
+  maxAge: 60 * 60 * 24, // 만료 시간 설정
+  path: '/',
+});
+
+// ❌ 안전하지 않은 쿠키
+cookies.set('session', token); // ❌ 기본값은 취약함
+
+// ✅ 비밀번호 해싱 (bcrypt)
+import bcrypt from 'bcrypt';
+const SALT_ROUNDS = 12;
+
+// 저장 시
+const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+// 검증 시
+const isValid = await bcrypt.compare(inputPassword, hashedPassword);
+
+// ❌ 평문 비밀번호 저장
+const user = { password: plainPassword }; // ❌ 절대 금지
+```
+
+### 6. CSRF 방지 (A01:2021)
+
+```typescript
+// ✅ state 파라미터로 CSRF 방지
+import crypto from 'crypto';
+
+export function generateState(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// OAuth 시작 시 state 저장
+cookies.set('oauth_state', state, {
+  httpOnly: true,
+  sameSite: 'lax',
+  maxAge: 60 * 10,
+});
+
+// 콜백에서 state 검증
+const savedState = cookies.get('oauth_state');
+if (requestState !== savedState) {
+  throw new InvalidStateError('CSRF attack detected');
+}
+
+// ✅ SameSite 쿠키로 추가 방어
+cookies.set('session', token, {
+  sameSite: 'strict', // 또는 'lax'
+});
+```
+
+### 7. 입력 검증 (A03:2021)
+
+```typescript
+// ✅ 서버 측 입력 검증 필수 (클라이언트 검증은 UX용)
+import { z } from 'zod';
+
+const LoginSchema = z.object({
+  username: z.string()
+    .min(3, '아이디는 3자 이상')
+    .max(20, '아이디는 20자 이하')
+    .regex(/^[a-zA-Z0-9]+$/, '영문과 숫자만 가능'),
+  password: z.string()
+    .min(4, '비밀번호는 4자 이상'),
+});
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+
+  // ✅ 스키마로 검증
+  const result = LoginSchema.safeParse(body);
+  if (!result.success) {
+    return NextResponse.json(
+      { error: result.error.issues[0].message },
+      { status: 400 }
+    );
+  }
+
+  const { username, password } = result.data;
+  // ...
+}
+
+// ❌ 검증 없이 사용
+const { username, password } = await request.json(); // ❌
+```
+
+### 8. 취약한 의존성 방지 (A06:2021)
+
+```bash
+# ✅ 정기적 취약점 검사 (최소 월 1회)
+npm audit
+
+# ✅ 취약점 자동 수정
+npm audit fix
+
+# ✅ 강제 수정 (breaking change 주의)
+npm audit fix --force
+
+# ✅ CI/CD에 audit 추가
+# .github/workflows/security.yml
+- name: Security audit
+  run: npm audit --audit-level=high
+```
+
+### 9. 민감 데이터 노출 방지 (A02:2021)
+
+```typescript
+// ✅ 응답에서 민감 정보 제외
+const { password, ...userWithoutPassword } = user;
+return NextResponse.json({ user: userWithoutPassword });
+
+// ✅ 선택적 필드 반환
+const publicUser = {
+  id: user.id,
+  name: user.name,
+  role: user.role,
+  // password, email 등 민감 정보 제외
+};
+
+// ❌ 전체 객체 반환
+return NextResponse.json({ user }); // ❌ 비밀번호 포함
+
+// ✅ 에러 메시지에서 시스템 정보 숨기기
+// 개발 환경
+if (process.env.NODE_ENV === 'development') {
+  return { error: error.message, stack: error.stack };
+}
+// 프로덕션
+return { error: '서버 오류가 발생했습니다.' };
+```
+
+### 10. Rate Limiting (A04:2021)
+
+```typescript
+// ✅ API Rate Limiting 구현
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, '10 s'), // 10초당 10회
+});
+
+export async function POST(request: NextRequest) {
+  const ip = request.ip ?? '127.0.0.1';
+  const { success, remaining } = await ratelimit.limit(ip);
+
+  if (!success) {
+    return NextResponse.json(
+      { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      { status: 429 }
+    );
+  }
+
+  // 정상 처리...
+}
+
+// ✅ 로그인 시도 제한 (Brute Force 방지)
+const loginRatelimit = new Ratelimit({
+  limiter: Ratelimit.slidingWindow(5, '15 m'), // 15분당 5회 시도
+});
+```
+
+### 11. 보안 헤더 설정 (A05:2021)
+
+```typescript
+// next.config.ts
+const securityHeaders = [
+  {
+    key: 'X-Content-Type-Options',
+    value: 'nosniff',
+  },
+  {
+    key: 'X-Frame-Options',
+    value: 'DENY',
+  },
+  {
+    key: 'X-XSS-Protection',
+    value: '1; mode=block',
+  },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=31536000; includeSubDomains',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: "default-src 'self'; script-src 'self' 'unsafe-inline'",
+  },
+];
+
+module.exports = {
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: securityHeaders,
+      },
+    ];
+  },
+};
+```
+
+### 12. 보안 체크리스트
+
+모든 기능 개발 시 아래 항목을 확인하세요:
+
+| 항목 | 확인 |
+|------|------|
+| 사용자 입력을 서버에서 검증하는가? | ☐ |
+| SQL 쿼리에 파라미터를 바인딩하는가? | ☐ |
+| 민감 정보가 로그에 남지 않는가? | ☐ |
+| 비밀번호가 해싱되어 저장되는가? | ☐ |
+| 세션 쿠키가 안전하게 설정되는가? | ☐ |
+| CSRF 토큰을 검증하는가? | ☐ |
+| Rate Limiting이 적용되는가? | ☐ |
+| 에러 메시지에 시스템 정보가 노출되지 않는가? | ☐ |
+| 응답에 민감 정보가 포함되지 않는가? | ☐ |
+| 의존성 취약점이 없는가? (npm audit) | ☐ |
+
+### 13. OWASP Top 10 (2021) 참고
+
+| 순위 | 취약점 | 대응 방법 |
+|------|--------|----------|
+| A01 | Broken Access Control | 인가 검증, CSRF 방지 |
+| A02 | Cryptographic Failures | HTTPS, 비밀번호 해싱 |
+| A03 | Injection | 입력 검증, Parameterized Query |
+| A04 | Insecure Design | Rate Limiting, 보안 설계 |
+| A05 | Security Misconfiguration | 보안 헤더, 기본값 변경 |
+| A06 | Vulnerable Components | npm audit, 정기 업데이트 |
+| A07 | Auth Failures | 안전한 세션 관리 |
+| A08 | Data Integrity Failures | 서명 검증, 입력 검증 |
+| A09 | Logging Failures | 보안 로깅, 민감정보 마스킹 |
+| A10 | SSRF | URL 검증, 화이트리스트 |
 
 ## 성능 최적화
 

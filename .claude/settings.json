@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "description": "파일 수정 시 모듈화 가이드라인 알림",
+        "command": "echo '💡 /refactor 로 모듈화 가이드라인 검사를 실행하세요'"
+      }
+    ],
+    "Stop": [
+      {
+        "description": "세션 종료 시 검사 알림",
+        "command": "echo '📋 작업 완료 전 /refactor 실행을 권장합니다'"
+      }
+    ]
+  }
+}
