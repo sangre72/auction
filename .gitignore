@@ -58,3 +58,6 @@ backend/.venv/
 .idea/
 *.swp
 *.swo
+
+# Claude Code
+.claude/
