@@ -11,33 +11,49 @@
 - ✅ **Python FastAPI** - AI 지원을 위한 백엔드
 - ✅ **N8N 통합** - 워크플로우 자동화 지원
 - ✅ **Claude Code 스킬** - 코드 자동 생성 지원
+- ✅ **견고한 에러 처리** - 타임아웃, 재시도, 사용자 친화적 에러 메시지
 
 ## 프로젝트 구조
 
 ```
 auction-001/
-├── .claude/
-│   └── skills/
-│       └── oauth-social-auth/      # Claude Code 스킬
-│           ├── SKILL.md
-│           ├── EXAMPLES.md
-│           ├── CONFIG.md
-│           └── N8N_WORKFLOW.json
+├── .claude/                        # Claude Code 설정 및 도구
+│   ├── skills/
+│   │   └── oauth-social-auth/      # OAuth 코드 생성 스킬
+│   │       ├── SKILL.md
+│   │       ├── EXAMPLES.md
+│   │       ├── CONFIG.md
+│   │       └── N8N_WORKFLOW.json
+│   ├── templates/                  # 코드 템플릿
+│   │   └── oauth-provider.template.ts
+│   └── scripts/                    # 스캐폴딩 스크립트
+│       └── new-oauth-provider.sh
+├── docs/                           # 프로젝트 문서
+│   └── adr/                        # Architecture Decision Records
+│       ├── README.md
+│       ├── template.md
+│       ├── 0001-typescript-and-nextjs.md
+│       └── 0002-oauth-provider-interface.md
 ├── src/                            # Next.js 프론트엔드
 │   ├── app/
 │   │   ├── api/auth/              # OAuth API Routes
+│   │   │   ├── [provider]/route.ts
+│   │   │   └── callback/route.ts
 │   │   ├── auth/                  # 인증 페이지
+│   │   │   ├── success/page.tsx
+│   │   │   └── error/page.tsx
 │   │   ├── layout.tsx
 │   │   ├── page.tsx
 │   │   └── globals.css
 │   ├── components/
 │   │   └── SocialLoginButtons.tsx
-│   └── lib/auth/                  # OAuth 라이브러리
-│       ├── index.ts
-│       ├── kakao.ts
-│       ├── naver.ts
-│       └── google.ts
-├── backend/                        # Python FastAPI 백엔드
+│   └── lib/auth/                  # OAuth 라이브러리 (재사용 가능)
+│       ├── index.ts               # 공통 인터페이스
+│       ├── errors.ts              # 에러 클래스 및 유틸리티
+│       ├── kakao.ts               # 카카오 OAuth 구현
+│       ├── naver.ts               # 네이버 OAuth 구현
+│       └── google.ts              # 구글 OAuth 구현
+├── backend/                        # Python FastAPI 백엔드 (선택)
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── routers/
@@ -47,10 +63,17 @@ auction-001/
 │   │   └── models/
 │   │       └── user.py
 │   └── requirements.txt
+├── ARCHITECTURE.md                 # 아키텍처 문서 ⭐
+├── CODING_GUIDELINES.md            # 코딩 규칙 ⭐
+├── ERROR_HANDLING.md               # 에러 처리 가이드 ⭐
+├── CONTRIBUTING.md                 # 기여 가이드 ⭐
+├── QUICKSTART.md                   # 빠른 시작 가이드
 ├── package.json
 ├── tsconfig.json
 └── README.md
 ```
+
+⭐ 표시된 문서들은 프로젝트의 재사용성과 확장성을 위한 핵심 문서입니다.
 
 ## 빠른 시작
 
@@ -282,13 +305,70 @@ Client ID와 Client Secret이 올바른지, 환경 변수가 제대로 로드되
 
 프론트엔드와 백엔드가 다른 포트에서 실행 중이라면, 백엔드의 CORS 설정을 확인하세요.
 
+## 에러 처리
+
+이 프로젝트는 견고한 에러 처리 메커니즘을 갖추고 있습니다.
+
+### 주요 기능
+
+- ✅ **타임아웃 처리**: 모든 API 요청에 10초 타임아웃 적용
+- ✅ **자동 재시도**: 네트워크 오류 시 최대 3회 자동 재시도 (지수 백오프)
+- ✅ **커스텀 에러 클래스**: 에러 종류별 명확한 분류 및 처리
+- ✅ **사용자 친화적 메시지**: 기술적 에러를 이해하기 쉬운 메시지로 변환
+- ✅ **구조화된 로깅**: 에러 추적 및 디버깅 용이
+- ✅ **OAuth 에러 처리**: access_denied 등 표준 OAuth 에러 파라미터 처리
+- ✅ **응답 검증**: API 응답 구조 검증으로 런타임 에러 방지
+
+### 에러 종류
+
+| 에러 | 설명 | 사용자 메시지 |
+|------|------|--------------|
+| `MissingConfigError` | 환경 변수 누락 | "○○ 로그인 설정이 완료되지 않았습니다" |
+| `NetworkError` | 네트워크 오류 | "네트워크 연결에 문제가 있습니다" |
+| `TimeoutError` | 요청 시간 초과 | "요청 시간이 초과되었습니다" |
+| `TokenRequestError` | 토큰 요청 실패 | "로그인 처리 중 오류가 발생했습니다" |
+| `UserInfoError` | 사용자 정보 실패 | "사용자 정보를 가져오는데 실패했습니다" |
+| `UserDeniedError` | 사용자 권한 거부 | "로그인이 취소되었습니다" |
+| `InvalidStateError` | CSRF 검증 실패 | "보안 검증에 실패했습니다" |
+
+### 자세한 내용
+
+에러 처리에 대한 자세한 내용은 [ERROR_HANDLING.md](ERROR_HANDLING.md)를 참조하세요.
+
 ## 라이선스
 
 MIT
 
+## 개발 가이드
+
+### 프로젝트 문서
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - 아키텍처 설계, 패턴, 확장 가이드
+- **[CODING_GUIDELINES.md](CODING_GUIDELINES.md)** - 코딩 규칙 및 베스트 프랙티스
+- **[ERROR_HANDLING.md](ERROR_HANDLING.md)** - 에러 처리 메커니즘
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - 기여 가이드
+- **[docs/adr/](docs/adr/)** - Architecture Decision Records
+
+### 새 OAuth 제공자 추가하기
+
+스캐폴딩 스크립트를 사용하면 30분 내에 새 제공자를 추가할 수 있습니다:
+
+```bash
+./.claude/scripts/new-oauth-provider.sh facebook
+```
+
+자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md#새-oauth-제공자-추가-가이드)를 참조하세요.
+
+### 코드 템플릿
+
+- **OAuth Provider**: `.claude/templates/oauth-provider.template.ts`
+- **ADR Template**: `docs/adr/template.md`
+
 ## 기여
 
 이슈 및 PR은 언제나 환영합니다!
+
+기여하기 전에 [CONTRIBUTING.md](CONTRIBUTING.md)를 읽어주세요.
 
 ## 참고 자료
 

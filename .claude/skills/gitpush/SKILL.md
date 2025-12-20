@@ -1,5 +1,6 @@
 ---
-name: git-smart-push
+name: gitpush
+user_invocable: true
 description: 변경사항을 자동으로 분석하여 Conventional Commits 형식으로 커밋하고, dev 브랜치를 merge한 후 push합니다.
 ---
 

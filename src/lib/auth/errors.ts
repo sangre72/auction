@@ -140,12 +140,12 @@ export class TokenRequestError extends OAuthError {
  * 사용자 정보 요청 실패
  */
 export class UserInfoError extends OAuthError {
-  constructor(provider: string, statusCode: number, details?: unknown) {
+  constructor(provider: string, statusCode: number, details?: Record<string, unknown>) {
     super(
       OAuthErrorCode.USER_INFO_FAILED,
       `Failed to fetch user info: HTTP ${statusCode}`,
       '사용자 정보를 가져오는데 실패했습니다. 다시 시도해주세요.',
-      { statusCode, ...details },
+      { statusCode, ...(details || {}) },
       provider
     );
     this.name = 'UserInfoError';
