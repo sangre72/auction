@@ -1,6 +1,6 @@
 # Git Smart Push 스킬
 
-안전하고 스마트한 Git push 워크플로우를 자동화하는 Claude Code 스킬입니다.
+Conventional Commits 형식으로 자동 커밋하고 안전하게 push하는 Claude Code 스킬입니다.
 
 ## 사용 방법
 
@@ -15,19 +15,20 @@
 
 ## 주요 기능
 
-### 1. 자동 Dev 브랜치 Merge
+### 1. 🤖 자동 커밋 (Conventional Commits)
+- 변경사항을 AI가 자동으로 분석
+- Conventional Commits 형식으로 커밋 메시지 자동 생성
+- `feat:`, `fix:`, `chore:` 등 자동 분류
+
+### 2. 🔄 자동 Dev 브랜치 Merge
 - dev 브랜치가 있으면 자동으로 감지
 - 최신 dev를 pull하고 현재 브랜치에 merge
 - 충돌 발생 시 안전하게 중단
 
-### 2. 스마트 Pull
+### 3. 📥 스마트 Pull & 🚀 Push
 - 현재 브랜치의 원격 변경사항을 자동으로 pull
-- 충돌 방지를 위한 사전 merge
-
-### 3. 안전한 Push
-- 모든 작업을 사용자에게 확인받음
-- main/master 브랜치 보호
-- 명확한 에러 메시지
+- 모든 준비 완료 후 자동 push
+- 사용자 확인 없이 전체 워크플로우 자동화
 
 ## 워크플로우
 
