@@ -6,10 +6,11 @@
 
 ```
 ddl/
-├── README.md           # 이 파일
-├── schema.sql          # 전체 스키마 (모든 테이블, 인덱스, FK)
-├── create_tables.sh    # 테이블 생성 스크립트
-└── tables/             # 테이블별 개별 DDL
+├── README.md             # 이 파일
+├── schema.sql            # 전체 스키마 (모든 테이블, 인덱스, FK)
+├── column_comments.sql   # 테이블/컬럼 코멘트 정의
+├── create_tables.sh      # 테이블 생성 스크립트
+└── tables/               # 테이블별 개별 DDL
     ├── users.sql
     ├── admins.sql
     ├── products.sql
@@ -50,6 +51,9 @@ ddl/
 ```bash
 # PostgreSQL에 전체 스키마 적용
 psql -h localhost -U postgres -d your_database -f schema.sql
+
+# 컬럼 코멘트 적용 (테이블/컬럼 설명)
+psql -h localhost -U postgres -d your_database -f column_comments.sql
 ```
 
 ### 개별 테이블 생성
