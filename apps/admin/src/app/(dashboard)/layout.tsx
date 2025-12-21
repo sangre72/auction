@@ -3,6 +3,7 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { SessionTimeoutProvider } from '@/components/providers/SessionTimeoutProvider';
+import { BlockedOverlay } from '@/components/common/BlockedOverlay';
 
 export default function DashboardLayout({
   children,
@@ -20,6 +21,8 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
+      {/* 보안 차단 오버레이 */}
+      <BlockedOverlay />
     </SessionTimeoutProvider>
   );
 }

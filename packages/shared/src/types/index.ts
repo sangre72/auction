@@ -6,24 +6,72 @@
 // 세션 관련 타입
 export * from './session';
 
+// 보안 관련 타입
+export * from './security';
+
 // ============================================
 // 사용자 관련 타입
 // ============================================
 
+export type UserStatus = 'active' | 'inactive' | 'suspended' | 'banned' | 'deleted';
+export type UserProvider = 'kakao' | 'naver' | 'google' | 'email';
+export type UserRole = 'user' | 'admin' | 'super_admin';
+export type VerificationLevel = 'none' | 'email' | 'phone' | 'identity';
+
 export interface User {
   id: number;
-  email: string;
-  name: string;
+  email?: string;
   phone?: string;
+  name?: string;
+  nickname?: string;
   profile_image?: string;
-  provider: 'kakao' | 'naver' | 'google' | 'email';
-  role: UserRole;
-  is_active: boolean;
+  provider: UserProvider;
+  status: UserStatus;
+  is_verified: boolean;
+  verification_level: VerificationLevel;
+  point_balance: number;
+  last_login_at?: string;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
-export type UserRole = 'user' | 'admin' | 'super_admin';
+export interface UserListItem {
+  id: number;
+  email?: string;
+  name?: string;
+  nickname?: string;
+  provider: UserProvider;
+  status: UserStatus;
+  is_verified: boolean;
+  verification_level: VerificationLevel;
+  point_balance: number;
+  last_login_at?: string;
+  created_at: string;
+}
+
+export interface UserUpdate {
+  name?: string;
+  nickname?: string;
+  phone?: string;
+  status?: UserStatus;
+  is_verified?: boolean;
+}
+
+export interface UserSearchParams {
+  email?: string;
+  name?: string;
+  phone?: string;
+  provider?: UserProvider;
+  status?: UserStatus;
+}
+
+export interface UserStats {
+  total: number;
+  active: number;
+  inactive: number;
+  suspended: number;
+  banned: number;
+}
 
 export interface AdminUser extends User {
   role: 'admin' | 'super_admin';

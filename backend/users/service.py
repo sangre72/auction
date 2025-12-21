@@ -101,6 +101,30 @@ class UserService:
 
         return UserResponse.model_validate(user)
 
+    def ban_user(self, user_id: int) -> UserResponse:
+        """사용자 영구 정지 (차단)"""
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise NotFoundException(detail="사용자를 찾을 수 없습니다")
+
+        user.status = UserStatus.BANNED.value
+        self.db.commit()
+        self.db.refresh(user)
+
+        return UserResponse.model_validate(user)
+
+    def set_inactive(self, user_id: int) -> UserResponse:
+        """사용자 휴면 처리"""
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise NotFoundException(detail="사용자를 찾을 수 없습니다")
+
+        user.status = UserStatus.INACTIVE.value
+        self.db.commit()
+        self.db.refresh(user)
+
+        return UserResponse.model_validate(user)
+
     def delete_user(self, user_id: int) -> bool:
         """사용자 삭제 (소프트 삭제)"""
         user = self.db.query(User).filter(User.id == user_id).first()
@@ -120,12 +144,20 @@ class UserService:
         active = self.db.query(User).filter(
             User.status == UserStatus.ACTIVE.value
         ).count()
+        inactive = self.db.query(User).filter(
+            User.status == UserStatus.INACTIVE.value
+        ).count()
         suspended = self.db.query(User).filter(
             User.status == UserStatus.SUSPENDED.value
+        ).count()
+        banned = self.db.query(User).filter(
+            User.status == UserStatus.BANNED.value
         ).count()
 
         return {
             "total": total,
             "active": active,
+            "inactive": inactive,
             "suspended": suspended,
+            "banned": banned,
         }

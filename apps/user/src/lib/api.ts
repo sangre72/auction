@@ -2,6 +2,8 @@
  * API 클라이언트 유틸리티 (User App)
  */
 
+import { handleSecurityResponse } from './security';
+
 // 공유 타입 import
 import type {
   Product,
@@ -78,11 +80,31 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-      credentials: 'include', // httpOnly 쿠키 자동 전송
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${endpoint}`, {
+        ...options,
+        headers,
+        credentials: 'include', // httpOnly 쿠키 자동 전송
+      });
+    } catch (networkError) {
+      throw {
+        detail: '서버에 연결할 수 없습니다.',
+        status: 0,
+      };
+    }
+
+    // 보안 응답 처리 (403, 429)
+    if (response.status === 403 || response.status === 429) {
+      const securityResult = await handleSecurityResponse(response.clone());
+      if (securityResult.blocked) {
+        const apiError: ApiError = {
+          detail: securityResult.data?.error?.reason || '접근이 차단되었습니다.',
+          status: response.status,
+        };
+        throw apiError;
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));

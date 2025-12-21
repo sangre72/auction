@@ -2,6 +2,8 @@
  * API 클라이언트 유틸리티
  */
 
+import { handleSecurityResponse } from './security';
+
 // 공유 타입 import
 import type {
   Product,
@@ -30,6 +32,16 @@ import type {
   ForbiddenWordUpdate,
   ForbiddenWordTarget,
   ForbiddenWordCheckResult,
+  User,
+  UserListItem,
+  UserUpdate,
+  UserStats,
+  UserStatus,
+  UserProvider,
+  BannedIP,
+  SuspiciousActivity,
+  SecurityStats,
+  BanIPRequest,
 } from '@auction/shared';
 
 // 타입 re-export
@@ -60,6 +72,16 @@ export type {
   ForbiddenWordUpdate,
   ForbiddenWordTarget,
   ForbiddenWordCheckResult,
+  User,
+  UserListItem,
+  UserUpdate,
+  UserStats,
+  UserStatus,
+  UserProvider,
+  BannedIP,
+  SuspiciousActivity,
+  SecurityStats,
+  BanIPRequest,
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -109,6 +131,18 @@ class ApiClient {
         detail: '서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.',
         status: 0,
       };
+    }
+
+    // 보안 응답 처리 (403, 429)
+    if (response.status === 403 || response.status === 429) {
+      const securityResult = await handleSecurityResponse(response.clone());
+      if (securityResult.blocked) {
+        const apiError: ApiError = {
+          detail: securityResult.data?.error?.reason || '접근이 차단되었습니다.',
+          status: response.status,
+        };
+        throw apiError;
+      }
     }
 
     if (!response.ok) {
@@ -171,12 +205,28 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: formData,
-      credentials: 'include',
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+        credentials: 'include',
+      });
+    } catch (networkError) {
+      throw { detail: '서버에 연결할 수 없습니다.', status: 0 };
+    }
+
+    // 보안 응답 처리 (403, 429)
+    if (response.status === 403 || response.status === 429) {
+      const securityResult = await handleSecurityResponse(response.clone());
+      if (securityResult.blocked) {
+        throw {
+          detail: securityResult.data?.error?.reason || '접근이 차단되었습니다.',
+          status: response.status,
+        };
+      }
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Upload failed' }));
@@ -403,4 +453,83 @@ export const forbiddenWordsApi = {
   // 텍스트 금칙어 검사
   checkText: (text: string, target?: ForbiddenWordTarget) =>
     api.post<ForbiddenWordCheckResult>('/forbidden-words/check', { text, target }),
+};
+
+// 사용자 관리 API
+export const usersApi = {
+  // 사용자 목록 조회
+  getList: (params?: {
+    page?: number;
+    page_size?: number;
+    email?: string;
+    name?: string;
+    phone?: string;
+    provider?: UserProvider;
+    status?: UserStatus;
+  }) => api.get<PaginatedResponse<UserListItem>>('/users', params),
+
+  // 사용자 통계
+  getStats: () => api.get<SuccessResponse<UserStats>>('/users/stats'),
+
+  // 사용자 상세 조회
+  getById: (id: number) => api.get<SuccessResponse<User>>(`/users/${id}`),
+
+  // 사용자 정보 수정
+  update: (id: number, data: UserUpdate) =>
+    api.patch<SuccessResponse<User>>(`/users/${id}`, data),
+
+  // 사용자 정지
+  suspend: (id: number) => api.post<SuccessResponse<User>>(`/users/${id}/suspend`),
+
+  // 사용자 활성화
+  activate: (id: number) => api.post<SuccessResponse<User>>(`/users/${id}/activate`),
+
+  // 사용자 영구 정지 (차단)
+  ban: (id: number) => api.post<SuccessResponse<User>>(`/users/${id}/ban`),
+
+  // 사용자 휴면 처리
+  setInactive: (id: number) => api.post<SuccessResponse<User>>(`/users/${id}/set-inactive`),
+
+  // 사용자 삭제 (소프트 삭제)
+  delete: (id: number) => api.delete<SuccessResponse<null>>(`/users/${id}`),
+};
+
+// 보안 관리 API
+export const securityApi = {
+  // 보안 통계 조회
+  getStats: () => api.get<SuccessResponse<SecurityStats>>('/security/stats'),
+
+  // 차단된 IP 목록 조회
+  getBannedList: () => api.get<SuccessResponse<BannedIP[]>>('/security/banned'),
+
+  // 의심 활동 목록 조회
+  getSuspiciousList: () => api.get<SuccessResponse<SuspiciousActivity[]>>('/security/suspicious'),
+
+  // IP 차단
+  banIP: (data: BanIPRequest) => api.post<SuccessResponse<BannedIP>>('/security/ban', data),
+
+  // IP 차단 해제
+  unbanIP: (ip: string) => api.post<SuccessResponse<null>>('/security/unban', { ip }),
+
+  // 의심 활동 기록 삭제
+  clearSuspicious: (ip: string) => api.delete<SuccessResponse<null>>(`/security/suspicious/${encodeURIComponent(ip)}`),
+
+  // 화이트리스트 조회
+  getWhitelist: () => api.get<SuccessResponse<string[]>>('/security/whitelist'),
+
+  // 화이트리스트 추가
+  addToWhitelist: (ip: string) => api.post<SuccessResponse<null>>('/security/whitelist', { ip }),
+
+  // 화이트리스트 제거
+  removeFromWhitelist: (ip: string) => api.delete<SuccessResponse<null>>(`/security/whitelist/${encodeURIComponent(ip)}`),
+
+  // 블랙리스트 조회
+  getBlacklist: () => api.get<SuccessResponse<string[]>>('/security/blacklist'),
+
+  // 블랙리스트 추가 (영구 차단)
+  addToBlacklist: (ip: string, reason?: string) =>
+    api.post<SuccessResponse<null>>('/security/blacklist', { ip, reason }),
+
+  // 블랙리스트 제거
+  removeFromBlacklist: (ip: string) => api.delete<SuccessResponse<null>>(`/security/blacklist/${encodeURIComponent(ip)}`),
 };

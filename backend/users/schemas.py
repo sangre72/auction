@@ -36,7 +36,10 @@ class UserListResponse(BaseModel):
     nickname: Optional[str] = None
     provider: str
     status: str
-    point_balance: int
+    is_verified: bool = False
+    verification_level: str = "none"
+    point_balance: int = 0
+    last_login_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:

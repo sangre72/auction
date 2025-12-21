@@ -126,6 +126,34 @@ async def activate_user(
     return SuccessResponse(message="사용자가 활성화되었습니다", data=user)
 
 
+@router.post("/{user_id}/ban", response_model=SuccessResponse[UserResponse])
+async def ban_user(
+    user_id: int,
+    current_admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    사용자 영구 정지 (차단)
+    """
+    service = UserService(db)
+    user = service.ban_user(user_id)
+    return SuccessResponse(message="사용자가 영구 정지되었습니다", data=user)
+
+
+@router.post("/{user_id}/set-inactive", response_model=SuccessResponse[UserResponse])
+async def set_user_inactive(
+    user_id: int,
+    current_admin: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    사용자 휴면 처리
+    """
+    service = UserService(db)
+    user = service.set_inactive(user_id)
+    return SuccessResponse(message="사용자가 휴면 처리되었습니다", data=user)
+
+
 @router.delete("/{user_id}", response_model=SuccessResponse[None])
 async def delete_user(
     user_id: int,

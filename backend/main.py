@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from core.config import settings
 from core.database import init_db
+from core.security_guard import SecurityConfig, setup_security
 
 # 라우터 임포트
 from auth.router import router as auth_router
@@ -31,6 +32,7 @@ from boards.router import router as boards_router
 from boards.public_router import router as public_boards_router
 from forbidden_words.router import router as forbidden_words_router
 from uploads.router import router as uploads_router
+from security.router import router as security_router
 
 
 @asynccontextmanager
@@ -69,6 +71,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 보안 미들웨어 설정
+security_config = SecurityConfig(
+    rate_limit=100,              # 분당 100 요청
+    auto_ban_threshold=15,       # 의심 요청 15회 시 자동 차단
+    auto_ban_duration=3600,      # 1시간 차단
+    enable_rate_limit=True,
+    enable_penetration_detection=True,
+    enable_auto_ban=True,
+    excluded_paths=["/docs", "/redoc", "/openapi.json", "/health", "/static"],
+)
+setup_security(app, security_config)
+
 # API 라우터 등록
 app.include_router(auth_router, prefix="/api")
 app.include_router(user_auth_router, prefix="/api")  # 일반 회원 인증
@@ -88,6 +102,7 @@ app.include_router(boards_router, prefix="/api")  # 게시판 관리
 app.include_router(public_boards_router, prefix="/api")  # 공개 게시판 API
 app.include_router(forbidden_words_router, prefix="/api")  # 금칙어 관리
 app.include_router(uploads_router, prefix="/api")  # 파일 업로드
+app.include_router(security_router, prefix="/api")  # 보안 관리
 
 # 정적 파일 서빙 (업로드된 파일)
 static_dir = Path("static")

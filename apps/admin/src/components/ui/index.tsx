@@ -709,3 +709,154 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     </div>
   );
 }
+
+// ============================================
+// Pagination Component
+// ============================================
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  showFirstLast?: boolean;
+}
+
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  showFirstLast = true,
+}: PaginationProps) {
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const delta = 2; // 현재 페이지 좌우로 보여줄 페이지 수
+
+    const left = Math.max(2, currentPage - delta);
+    const right = Math.min(totalPages - 1, currentPage + delta);
+
+    if (totalPages <= 1) return [1];
+
+    pages.push(1);
+
+    if (left > 2) {
+      pages.push('...');
+    }
+
+    for (let i = left; i <= right; i++) {
+      if (i !== 1 && i !== totalPages) {
+        pages.push(i);
+      }
+    }
+
+    if (right < totalPages - 1) {
+      pages.push('...');
+    }
+
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
+  if (totalPages <= 1) return null;
+
+  return (
+    <nav className="flex items-center gap-1">
+      {/* First */}
+      {showFirstLast && (
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          className={cn(
+            'p-2 rounded-lg transition-colors',
+            currentPage === 1
+              ? 'text-gray-600 cursor-not-allowed'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          )}
+          title="처음"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+
+      {/* Previous */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className={cn(
+          'p-2 rounded-lg transition-colors',
+          currentPage === 1
+            ? 'text-gray-600 cursor-not-allowed'
+            : 'text-gray-400 hover:text-white hover:bg-white/5'
+        )}
+        title="이전"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      {/* Page Numbers */}
+      <div className="flex items-center gap-1">
+        {getPageNumbers().map((page, index) =>
+          page === '...' ? (
+            <span key={`ellipsis-${index}`} className="px-2 text-gray-500">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              onClick={() => onPageChange(page as number)}
+              className={cn(
+                'min-w-[2rem] h-8 px-2 rounded-lg text-sm font-medium transition-colors',
+                currentPage === page
+                  ? 'bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-white border border-purple-500/30'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+              )}
+            >
+              {page}
+            </button>
+          )
+        )}
+      </div>
+
+      {/* Next */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className={cn(
+          'p-2 rounded-lg transition-colors',
+          currentPage === totalPages
+            ? 'text-gray-600 cursor-not-allowed'
+            : 'text-gray-400 hover:text-white hover:bg-white/5'
+        )}
+        title="다음"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      {/* Last */}
+      {showFirstLast && (
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          className={cn(
+            'p-2 rounded-lg transition-colors',
+            currentPage === totalPages
+              ? 'text-gray-600 cursor-not-allowed'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          )}
+          title="마지막"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+    </nav>
+  );
+}
