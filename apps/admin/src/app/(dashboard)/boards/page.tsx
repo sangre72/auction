@@ -81,7 +81,7 @@ export default function BoardsPage() {
       header: '게시판',
       render: (board: BoardListItem) => (
         <div>
-          <div className="font-medium text-gray-900">{board.title}</div>
+          <div className="font-medium text-white">{board.title}</div>
           <div className="text-sm text-gray-500">/{board.name}</div>
         </div>
       ),
@@ -108,14 +108,14 @@ export default function BoardsPage() {
       render: (board: BoardListItem) => (
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
             size="sm"
+            className="bg-gradient-to-r from-purple-500 to-cyan-500 text-white hover:from-purple-600 hover:to-cyan-600"
             onClick={(e) => {
               e.stopPropagation();
               router.push(`/boards/${board.id}/posts`);
             }}
           >
-            게시글
+            게시글 ({board.post_count})
           </Button>
           <Button
             variant="ghost"
@@ -158,8 +158,8 @@ export default function BoardsPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">게시판 관리</h1>
-          <p className="text-gray-600 mt-1">게시판을 생성하고 관리합니다.</p>
+          <h1 className="text-2xl font-bold text-white">게시판 관리</h1>
+          <p className="text-gray-400 mt-1">게시판을 생성하고 관리합니다.</p>
         </div>
         <Button onClick={() => router.push('/boards/new')}>
           게시판 추가

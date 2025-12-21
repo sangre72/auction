@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { QueueOverlay } from '@/components/queue/QueueOverlay';
 import { QueueListPanel } from '@/components/queue/QueueListPanel';
 import { BidConfirmModal } from '@/components/auction/BidConfirmModal';
@@ -146,34 +144,26 @@ export default function AuctionDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
-        </main>
-        <Footer />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">
-              {error || '상품을 찾을 수 없습니다'}
-            </h1>
-            <button
-              onClick={() => router.push('/')}
-              className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
-            >
-              홈으로 돌아가기
-            </button>
-          </div>
-        </main>
-        <Footer />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {error || '상품을 찾을 수 없습니다'}
+          </h1>
+          <button
+            onClick={() => router.push('/')}
+            className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+          >
+            홈으로 돌아가기
+          </button>
+        </div>
       </div>
     );
   }
@@ -370,9 +360,7 @@ export default function AuctionDetailPage() {
   const images = product.thumbnail_url ? [product.thumbnail_url] : [];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
-
+    <>
       {/* 대기열 오버레이 */}
       {!queue.isAllowed && queue.position > 0 && (
         <QueueOverlay
@@ -382,7 +370,7 @@ export default function AuctionDetailPage() {
         />
       )}
 
-      <main className="flex-1">
+      <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* 뒤로가기 */}
           <button
@@ -634,9 +622,7 @@ export default function AuctionDetailPage() {
             </div>
           </div>
         </div>
-      </main>
-
-      <Footer />
+      </div>
 
       {/* 입찰 확인 모달 */}
       <BidConfirmModal
@@ -658,6 +644,6 @@ export default function AuctionDetailPage() {
         paymentStatus={paymentStatus}
         paymentMessage={paymentMessage}
       />
-    </div>
+    </>
   );
 }

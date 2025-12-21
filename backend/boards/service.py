@@ -429,6 +429,7 @@ class BoardService:
             author=AuthorResponse(
                 id=author.id,
                 name=author.name,
+                nickname=author.nickname,
                 profile_image=author.profile_image,
             ) if author else None,
             title=post.title,
@@ -560,6 +561,7 @@ class BoardService:
             author=AuthorResponse(
                 id=author.id,
                 name=author.name,
+                nickname=author.nickname,
                 profile_image=author.profile_image,
             ) if author else None,
             parent_id=comment.parent_id,

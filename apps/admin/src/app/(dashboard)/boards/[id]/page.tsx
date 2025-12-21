@@ -152,8 +152,8 @@ export default function EditBoardPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">게시판 편집</h1>
-          <p className="text-gray-600 mt-1">{board.title} 게시판을 수정합니다.</p>
+          <h1 className="text-2xl font-bold text-white">게시판 편집</h1>
+          <p className="text-gray-400 mt-1">{board.title} 게시판을 수정합니다.</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => router.push(`/boards/${boardId}/posts`)}>
@@ -174,7 +174,7 @@ export default function EditBoardPage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 기본 정보 */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">기본 정보</h2>
+          <h2 className="text-lg font-semibold text-white">기본 정보</h2>
 
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -195,14 +195,14 @@ export default function EditBoardPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               설명
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => updateField('description', e.target.value)}
               placeholder="게시판 설명을 입력하세요"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               rows={3}
             />
           </div>
@@ -222,7 +222,7 @@ export default function EditBoardPage() {
                   onChange={(e) => updateField('is_active', e.target.checked)}
                   className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
                 />
-                <span className="text-sm text-gray-700">활성화</span>
+                <span className="text-sm text-gray-300">활성화</span>
               </label>
             </div>
           </div>
@@ -230,17 +230,17 @@ export default function EditBoardPage() {
 
         {/* 권한 설정 */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">권한 설정</h2>
+          <h2 className="text-lg font-semibold text-white">권한 설정</h2>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 읽기 권한
               </label>
               <select
                 value={formData.read_permission}
                 onChange={(e) => updateField('read_permission', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 {readPermissionOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -251,13 +251,13 @@ export default function EditBoardPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 쓰기 권한
               </label>
               <select
                 value={formData.write_permission}
                 onChange={(e) => updateField('write_permission', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 {writePermissionOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -268,13 +268,13 @@ export default function EditBoardPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-300 mb-1">
                 댓글 권한
               </label>
               <select
                 value={formData.comment_permission}
                 onChange={(e) => updateField('comment_permission', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
                 {commentPermissionOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -288,7 +288,7 @@ export default function EditBoardPage() {
 
         {/* 기능 설정 */}
         <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900">기능 설정</h2>
+          <h2 className="text-lg font-semibold text-white">기능 설정</h2>
 
           <div className="space-y-3">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -298,7 +298,7 @@ export default function EditBoardPage() {
                 onChange={(e) => updateField('allow_images', e.target.checked)}
                 className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
               />
-              <span className="text-sm text-gray-700">이미지 첨부 허용</span>
+              <span className="text-sm text-gray-300">이미지 첨부 허용</span>
             </label>
 
             <label className="flex items-center gap-2 cursor-pointer">
@@ -308,7 +308,7 @@ export default function EditBoardPage() {
                 onChange={(e) => updateField('allow_attachments', e.target.checked)}
                 className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
               />
-              <span className="text-sm text-gray-700">파일 첨부 허용</span>
+              <span className="text-sm text-gray-300">파일 첨부 허용</span>
             </label>
 
             {formData.allow_attachments && (

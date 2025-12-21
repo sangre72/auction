@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # 서버 설정
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    BACKEND_URL: str = "http://localhost:8000"  # 정적 파일 URL 생성에 사용
 
     # 데이터베이스
     DATABASE_URL: str = "postgresql://postgres:santape1@localhost/test_db"

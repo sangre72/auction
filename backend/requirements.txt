@@ -23,6 +23,9 @@ httpx>=0.28.0
 python-dotenv>=1.0.1
 python-multipart>=0.0.20
 
+# 파일 처리
+aiofiles>=24.1.0
+
 # AI 지원 (선택)
 openai>=1.59.0
 anthropic>=0.42.0

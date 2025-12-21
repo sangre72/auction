@@ -148,7 +148,7 @@ export function CommentSection({
             <span className="text-gray-500">
               {editingComment
                 ? '댓글 수정 중'
-                : `@${replyTarget?.author?.name || '알 수 없음'}에게 답글`}
+                : `@${replyTarget?.author?.nickname || replyTarget?.author?.name || '알 수 없음'}에게 답글`}
             </span>
             <button
               type="button"
@@ -175,7 +175,7 @@ export function CommentSection({
               onChange={(e) => setContent(e.target.value)}
               placeholder={getPlaceholder()}
               rows={3}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none text-gray-900 placeholder:text-gray-400"
             />
             <div className="flex justify-end mt-2">
               <button

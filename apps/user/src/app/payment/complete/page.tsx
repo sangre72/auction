@@ -2,8 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import Link from 'next/link';
 
 interface PendingPayment {
@@ -89,10 +87,7 @@ function PaymentCompleteContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
-
-      <main className="flex-1 flex items-center justify-center px-4">
+    <div className="flex-1 flex items-center justify-center px-4">
         <div className="max-w-md w-full">
           {status === 'loading' && (
             <div className="text-center">
@@ -173,9 +168,6 @@ function PaymentCompleteContent() {
             </div>
           )}
         </div>
-      </main>
-
-      <Footer />
     </div>
   );
 }

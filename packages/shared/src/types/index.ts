@@ -446,6 +446,7 @@ export interface BoardStats {
 export interface PostAuthor {
   id: number;
   name?: string;
+  nickname?: string;
   profile_image?: string;
 }
 
@@ -548,4 +549,47 @@ export interface CommentCreate {
 
 export interface CommentUpdate {
   content: string;
+}
+
+// ============================================
+// 금칙어 관련 타입
+// ============================================
+
+export type ForbiddenWordType = 'exact' | 'contains' | 'regex';
+export type ForbiddenWordTarget = 'all' | 'post_title' | 'post_content' | 'comment' | 'nickname';
+
+export interface ForbiddenWord {
+  id: number;
+  word: string;
+  replacement?: string;
+  match_type: ForbiddenWordType;
+  target: ForbiddenWordTarget;
+  is_active: boolean;
+  reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForbiddenWordCreate {
+  word: string;
+  replacement?: string;
+  match_type?: ForbiddenWordType;
+  target?: ForbiddenWordTarget;
+  is_active?: boolean;
+  reason?: string;
+}
+
+export interface ForbiddenWordUpdate {
+  word?: string;
+  replacement?: string;
+  match_type?: ForbiddenWordType;
+  target?: ForbiddenWordTarget;
+  is_active?: boolean;
+  reason?: string;
+}
+
+export interface ForbiddenWordCheckResult {
+  contains_forbidden: boolean;
+  matched_words: string[];
+  filtered_text?: string;
 }

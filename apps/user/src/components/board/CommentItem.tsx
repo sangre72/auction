@@ -63,14 +63,14 @@ export function CommentItem({
       <div className="flex items-start gap-3">
         {/* 아바타 */}
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-cyan-400 flex items-center justify-center text-white font-medium flex-shrink-0">
-          {comment.author?.name?.charAt(0) || '?'}
+          {(comment.author?.nickname || comment.author?.name)?.charAt(0) || '?'}
         </div>
 
         <div className="flex-1 min-w-0">
           {/* 작성자 정보 */}
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-gray-900">
-              {comment.author?.name || '익명'}
+              {comment.author?.nickname || comment.author?.name || '익명'}
             </span>
             <span className="text-sm text-gray-400">
               {formatRelativeTime(comment.created_at)}

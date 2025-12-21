@@ -10,6 +10,7 @@ import type {
   SlotStats,
   PaginatedResponse,
   SuccessResponse,
+  Board,
   BoardListItem,
   PostListItem,
   Post,
@@ -33,6 +34,7 @@ export type {
   SlotStats,
   PaginatedResponse,
   SuccessResponse,
+  Board,
   BoardListItem,
   PostListItem,
   Post,
@@ -170,8 +172,8 @@ export const boardsApi = {
   // 활성 게시판 목록 조회
   getList: () => api.get<SuccessResponse<BoardListItem[]>>('/public/boards'),
 
-  // 게시판 상세 조회 (slug로 조회)
-  getBySlug: (slug: string) => api.get<SuccessResponse<BoardListItem>>(`/public/boards/${slug}`),
+  // 게시판 상세 조회 (slug로 조회) - Board 타입으로 write_permission 포함
+  getBySlug: (slug: string) => api.get<SuccessResponse<Board>>(`/public/boards/${slug}`),
 };
 
 // 게시글 API (공개 API)

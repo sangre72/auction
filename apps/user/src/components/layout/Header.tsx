@@ -60,6 +60,7 @@ export function Header() {
     { name: '홈', href: '/' },
     { name: '경매', href: '/' },
     { name: '중고거래', href: '/used' },
+    { name: '공지사항', href: '/board/notice' },
     { name: '마이페이지', href: '/mypage' },
   ];
 

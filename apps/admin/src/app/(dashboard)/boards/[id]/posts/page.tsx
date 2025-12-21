@@ -103,6 +103,26 @@ export default function BoardPostsPage() {
     }
   };
 
+  const handleTogglePinned = async (post: PostListItem) => {
+    try {
+      await postsApi.setPinned(post.id, !post.is_pinned);
+      fetchData();
+    } catch (err) {
+      console.error('Failed to toggle pinned:', err);
+      setError('고정 설정에 실패했습니다.');
+    }
+  };
+
+  const handleRestore = async (post: PostListItem) => {
+    try {
+      await postsApi.restore(post.id);
+      fetchData();
+    } catch (err) {
+      console.error('Failed to restore post:', err);
+      setError('게시글 복원에 실패했습니다.');
+    }
+  };
+
   const columns = [
     {
       key: 'badge',
@@ -123,7 +143,7 @@ export default function BoardPostsPage() {
       header: '제목',
       render: (post: PostListItem) => (
         <div>
-          <span className="font-medium text-gray-900">{post.title}</span>
+          <span className="font-medium text-white">{post.title}</span>
           {post.comment_count > 0 && (
             <span className="text-purple-600 ml-1">[{post.comment_count}]</span>
           )}
@@ -140,7 +160,7 @@ export default function BoardPostsPage() {
       key: 'author_name',
       header: '작성자',
       render: (post: PostListItem) => (
-        <span className="text-gray-600">{post.author_name || '(알 수 없음)'}</span>
+        <span className="text-gray-300">{post.author_name || '(알 수 없음)'}</span>
       ),
     },
     {
@@ -177,7 +197,7 @@ export default function BoardPostsPage() {
       key: 'actions',
       header: '관리',
       render: (post: PostListItem) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
@@ -186,19 +206,43 @@ export default function BoardPostsPage() {
               handleToggleNotice(post);
             }}
           >
-            {post.is_notice ? '공지해제' : '공지설정'}
+            {post.is_notice ? '공지해제' : '공지'}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="text-red-600 hover:text-red-700"
             onClick={(e) => {
               e.stopPropagation();
-              handleDelete(post);
+              handleTogglePinned(post);
             }}
           >
-            삭제
+            {post.is_pinned ? '고정해제' : '고정'}
           </Button>
+          {post.status === 'deleted' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-emerald-500 hover:text-emerald-400"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRestore(post);
+              }}
+            >
+              복원
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-500 hover:text-red-400"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(post);
+              }}
+            >
+              삭제
+            </Button>
+          )}
         </div>
       ),
     },
@@ -209,12 +253,15 @@ export default function BoardPostsPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-white">
             {board?.title || '게시판'} 게시글 관리
           </h1>
-          <p className="text-gray-600 mt-1">/{board?.name}</p>
+          <p className="text-gray-400 mt-1">/{board?.name}</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => router.push(`/boards/${boardId}/posts/new`)}>
+            게시글 작성
+          </Button>
           <Button variant="outline" onClick={() => router.push(`/boards/${boardId}`)}>
             게시판 설정
           </Button>
@@ -272,6 +319,7 @@ export default function BoardPostsPage() {
         data={posts}
         columns={columns}
         isLoading={loading}
+        onRowClick={(post) => router.push(`/boards/${boardId}/posts/${post.id}`)}
       />
 
       {/* 페이지네이션 */}
@@ -285,7 +333,7 @@ export default function BoardPostsPage() {
           >
             이전
           </Button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-400">
             {page} / {totalPages}
           </span>
           <Button

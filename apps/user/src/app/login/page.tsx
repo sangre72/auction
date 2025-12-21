@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
@@ -26,6 +24,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // httpOnly 쿠키 사용
         body: JSON.stringify({ email, password }),
       });
 
@@ -35,13 +34,7 @@ export default function LoginPage() {
         throw new Error(data.detail || '로그인에 실패했습니다.');
       }
 
-      // 토큰 저장
-      localStorage.setItem('user_token', data.data.token);
-
-      // 사용자 정보 저장
-      localStorage.setItem('user_info', JSON.stringify(data.data.user));
-
-      // 홈으로 이동
+      // 홈으로 이동 (토큰은 쿠키에 자동 저장됨)
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
@@ -51,10 +44,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
-
-      <main className="flex-1 flex items-center justify-center px-4 py-12">
+    <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
             {/* 헤더 */}
@@ -141,9 +131,6 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-      </main>
-
-      <Footer />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
 import { ClientProviders } from '@/components/providers/ClientProviders';
+import { MainLayout } from '@/components/layout/MainLayout';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export default function RootLayout({
     <html lang="ko">
       <body className="antialiased">
         <ClientProviders>
-          {children}
+          <MainLayout>{children}</MainLayout>
         </ClientProviders>
         <Toaster
           position="top-center"

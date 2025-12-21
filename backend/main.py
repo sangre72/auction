@@ -4,8 +4,10 @@ FastAPI 기반 관리자 백엔드 서버
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from core.config import settings
 from core.database import init_db
@@ -27,6 +29,8 @@ from categories.router import router as categories_router
 from wishlist.router import router as wishlist_router
 from boards.router import router as boards_router
 from boards.public_router import router as public_boards_router
+from forbidden_words.router import router as forbidden_words_router
+from uploads.router import router as uploads_router
 
 
 @asynccontextmanager
@@ -35,6 +39,13 @@ async def lifespan(app: FastAPI):
     # 시작 시 DB 초기화
     init_db()
     print("Database initialized")
+
+    # 업로드 디렉토리 생성
+    upload_dir = Path("static/uploads")
+    (upload_dir / "images").mkdir(parents=True, exist_ok=True)
+    (upload_dir / "attachments").mkdir(parents=True, exist_ok=True)
+    print("Upload directories created")
+
     yield
     # 종료 시 정리 작업
     print("Shutting down...")
@@ -75,6 +86,13 @@ app.include_router(categories_router, prefix="/api")
 app.include_router(wishlist_router, prefix="/api")  # 관심 상품
 app.include_router(boards_router, prefix="/api")  # 게시판 관리
 app.include_router(public_boards_router, prefix="/api")  # 공개 게시판 API
+app.include_router(forbidden_words_router, prefix="/api")  # 금칙어 관리
+app.include_router(uploads_router, prefix="/api")  # 파일 업로드
+
+# 정적 파일 서빙 (업로드된 파일)
+static_dir = Path("static")
+static_dir.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/")

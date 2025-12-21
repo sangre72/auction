@@ -112,6 +112,7 @@ class AuthorResponse(BaseModel):
     """작성자 정보"""
     id: int
     name: Optional[str] = None
+    nickname: Optional[str] = None
     profile_image: Optional[str] = None
 
 

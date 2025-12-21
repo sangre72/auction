@@ -23,7 +23,13 @@ import type {
   BoardStats,
   Post,
   PostListItem,
+  PostCreate,
   PostUpdate,
+  ForbiddenWord,
+  ForbiddenWordCreate,
+  ForbiddenWordUpdate,
+  ForbiddenWordTarget,
+  ForbiddenWordCheckResult,
 } from '@auction/shared';
 
 // 타입 re-export
@@ -47,7 +53,13 @@ export type {
   BoardStats,
   Post,
   PostListItem,
+  PostCreate,
   PostUpdate,
+  ForbiddenWord,
+  ForbiddenWordCreate,
+  ForbiddenWordUpdate,
+  ForbiddenWordTarget,
+  ForbiddenWordCheckResult,
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -84,10 +96,20 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${endpoint}`, {
+        ...options,
+        headers,
+        credentials: 'include',
+      });
+    } catch (networkError) {
+      // 네트워크 에러 (백엔드 서버 연결 실패)
+      throw {
+        detail: '서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.',
+        status: 0,
+      };
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
@@ -153,6 +175,7 @@ class ApiClient {
       method: 'POST',
       headers,
       body: formData,
+      credentials: 'include',
     });
 
     if (!response.ok) {
@@ -328,6 +351,10 @@ export const postsApi = {
   // 게시글 상세 조회
   getById: (id: number) => api.get<SuccessResponse<Post>>(`/boards/posts/${id}`),
 
+  // 게시글 생성
+  create: (boardId: number, data: Omit<PostCreate, 'board_id'>) =>
+    api.post<SuccessResponse<Post>>(`/boards/${boardId}/posts`, { ...data, board_id: boardId }),
+
   // 게시글 수정
   update: (id: number, data: PostUpdate) =>
     api.patch<SuccessResponse<Post>>(`/boards/posts/${id}`, data),
@@ -338,4 +365,42 @@ export const postsApi = {
   // 공지 설정
   setNotice: (id: number, is_notice: boolean) =>
     api.post<SuccessResponse<Post>>(`/boards/posts/${id}/notice?is_notice=${is_notice}`),
+
+  // 고정 설정
+  setPinned: (id: number, is_pinned: boolean) =>
+    api.patch<SuccessResponse<Post>>(`/boards/posts/${id}`, { is_pinned }),
+
+  // 게시글 복원 (deleted -> published)
+  restore: (id: number) =>
+    api.patch<SuccessResponse<Post>>(`/boards/posts/${id}`, { status: 'published' }),
+};
+
+// 금칙어 관리 API
+export const forbiddenWordsApi = {
+  // 금칙어 목록 조회
+  getList: (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    target?: ForbiddenWordTarget;
+    is_active?: boolean;
+  }) => api.get<PaginatedResponse<ForbiddenWord>>('/forbidden-words', params),
+
+  // 금칙어 상세 조회
+  getById: (id: number) => api.get<ForbiddenWord>(`/forbidden-words/${id}`),
+
+  // 금칙어 생성
+  create: (data: ForbiddenWordCreate) =>
+    api.post<ForbiddenWord>('/forbidden-words', data),
+
+  // 금칙어 수정
+  update: (id: number, data: ForbiddenWordUpdate) =>
+    api.patch<ForbiddenWord>(`/forbidden-words/${id}`, data),
+
+  // 금칙어 삭제
+  delete: (id: number) => api.delete<void>(`/forbidden-words/${id}`),
+
+  // 텍스트 금칙어 검사
+  checkText: (text: string, target?: ForbiddenWordTarget) =>
+    api.post<ForbiddenWordCheckResult>('/forbidden-words/check', { text, target }),
 };

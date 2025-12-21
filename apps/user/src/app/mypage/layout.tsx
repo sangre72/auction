@@ -2,8 +2,6 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 
 interface MenuItem {
   id: string;
@@ -115,13 +113,10 @@ export default function MyPageLayout({
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
-
-      <main className="flex-1 py-8">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* 사이드바 메뉴 */}
+    <div className="py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* 사이드바 메뉴 */}
             <aside className="w-full lg:w-64 shrink-0">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-4">
                 {/* 프로필 요약 */}
@@ -188,15 +183,12 @@ export default function MyPageLayout({
               </div>
             </aside>
 
-            {/* 콘텐츠 영역 */}
-            <div className="flex-1 min-w-0">
-              {children}
-            </div>
+          {/* 콘텐츠 영역 */}
+          <div className="flex-1 min-w-0">
+            {children}
           </div>
         </div>
-      </main>
-
-      <Footer />
+      </div>
     </div>
   );
 }
