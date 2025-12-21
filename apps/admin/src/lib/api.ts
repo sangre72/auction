@@ -38,10 +38,6 @@ import type {
   UserStats,
   UserStatus,
   UserProvider,
-  BannedIP,
-  SuspiciousActivity,
-  SecurityStats,
-  BanIPRequest,
 } from '@auction/shared';
 
 // 타입 re-export
@@ -78,11 +74,10 @@ export type {
   UserStats,
   UserStatus,
   UserProvider,
-  BannedIP,
-  SuspiciousActivity,
-  SecurityStats,
-  BanIPRequest,
 };
+
+// 보안 타입은 @auction/shared에서 직접 import
+// 보안 API는 @/features/security에서 사용
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -492,44 +487,4 @@ export const usersApi = {
 
   // 사용자 삭제 (소프트 삭제)
   delete: (id: number) => api.delete<SuccessResponse<null>>(`/users/${id}`),
-};
-
-// 보안 관리 API
-export const securityApi = {
-  // 보안 통계 조회
-  getStats: () => api.get<SuccessResponse<SecurityStats>>('/security/stats'),
-
-  // 차단된 IP 목록 조회
-  getBannedList: () => api.get<SuccessResponse<BannedIP[]>>('/security/banned'),
-
-  // 의심 활동 목록 조회
-  getSuspiciousList: () => api.get<SuccessResponse<SuspiciousActivity[]>>('/security/suspicious'),
-
-  // IP 차단
-  banIP: (data: BanIPRequest) => api.post<SuccessResponse<BannedIP>>('/security/ban', data),
-
-  // IP 차단 해제
-  unbanIP: (ip: string) => api.post<SuccessResponse<null>>('/security/unban', { ip }),
-
-  // 의심 활동 기록 삭제
-  clearSuspicious: (ip: string) => api.delete<SuccessResponse<null>>(`/security/suspicious/${encodeURIComponent(ip)}`),
-
-  // 화이트리스트 조회
-  getWhitelist: () => api.get<SuccessResponse<string[]>>('/security/whitelist'),
-
-  // 화이트리스트 추가
-  addToWhitelist: (ip: string) => api.post<SuccessResponse<null>>('/security/whitelist', { ip }),
-
-  // 화이트리스트 제거
-  removeFromWhitelist: (ip: string) => api.delete<SuccessResponse<null>>(`/security/whitelist/${encodeURIComponent(ip)}`),
-
-  // 블랙리스트 조회
-  getBlacklist: () => api.get<SuccessResponse<string[]>>('/security/blacklist'),
-
-  // 블랙리스트 추가 (영구 차단)
-  addToBlacklist: (ip: string, reason?: string) =>
-    api.post<SuccessResponse<null>>('/security/blacklist', { ip, reason }),
-
-  // 블랙리스트 제거
-  removeFromBlacklist: (ip: string) => api.delete<SuccessResponse<null>>(`/security/blacklist/${encodeURIComponent(ip)}`),
 };

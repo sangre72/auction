@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SecurityDashboardWidget } from '@/features/security';
 
 // 데모용 통계 데이터
 const stats = {
@@ -153,9 +154,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 최근 활동 */}
-      <div className="rounded-2xl bg-slate-800/50 border border-white/5 p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">최근 활동</h2>
+      {/* 보안 현황 & 최근 활동 */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* 보안 현황 */}
+        <SecurityDashboardWidget />
+
+        {/* 최근 활동 */}
+        <div className="rounded-2xl bg-slate-800/50 border border-white/5 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">최근 활동</h2>
         <div className="space-y-4">
           {[
             { action: '새 상품 등록', user: 'admin1', time: '방금 전', icon: PackageIcon, color: 'purple' },
@@ -174,6 +180,7 @@ export default function DashboardPage() {
               <span className="text-xs text-gray-500">{item.time}</span>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>

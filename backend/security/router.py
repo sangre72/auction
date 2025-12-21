@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from core.security_guard import SecurityMiddleware
-from auth.dependencies import require_super_admin
+from core.security import require_super_admin
 
 
 router = APIRouter(prefix="/security", tags=["Security Management"])

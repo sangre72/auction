@@ -11,6 +11,7 @@ from .security import (
     verify_password,
     get_current_user,
     get_current_admin,
+    require_super_admin,
 )
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     "verify_password",
     "get_current_user",
     "get_current_admin",
+    "require_super_admin",
 ]

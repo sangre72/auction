@@ -147,6 +147,19 @@ async def get_current_admin(
     return current_user
 
 
+async def require_super_admin(
+    current_user: dict[str, Any] = Depends(get_current_user),
+) -> dict[str, Any]:
+    """슈퍼 관리자 권한 필수"""
+    role = current_user.get("role")
+    if role != "super_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="슈퍼 관리자 권한이 필요합니다",
+        )
+    return current_user
+
+
 # Optional bearer scheme (auto_error=False)
 bearer_scheme_optional = HTTPBearer(auto_error=False)
 
