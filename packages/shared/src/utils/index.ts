@@ -128,3 +128,16 @@ export function maskEmail(email: string): string {
   const maskedLocal = local.slice(0, 2) + '***';
   return `${maskedLocal}@${domain}`;
 }
+
+/**
+ * 파일 크기를 사람이 읽기 쉬운 형식으로 포맷팅
+ * @param bytes - 파일 크기 (바이트)
+ * @returns 포맷팅된 파일 크기 (예: "1.5 MB")
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}

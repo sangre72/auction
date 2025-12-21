@@ -16,6 +16,14 @@ import type {
   CategoryTree,
   PaginatedResponse,
   SuccessResponse,
+  Board,
+  BoardListItem,
+  BoardCreate,
+  BoardUpdate,
+  BoardStats,
+  Post,
+  PostListItem,
+  PostUpdate,
 } from '@auction/shared';
 
 // 타입 re-export
@@ -32,6 +40,14 @@ export type {
   CategoryTree,
   PaginatedResponse,
   SuccessResponse,
+  Board,
+  BoardListItem,
+  BoardCreate,
+  BoardUpdate,
+  BoardStats,
+  Post,
+  PostListItem,
+  PostUpdate,
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -269,4 +285,57 @@ export const categoriesApi = {
 
   // 카테고리 삭제
   delete: (id: number) => api.delete<SuccessResponse<null>>(`/categories/${id}`),
+};
+
+// 게시판 API
+export const boardsApi = {
+  // 게시판 목록 조회
+  getList: (params?: { is_active?: boolean }) =>
+    api.get<PaginatedResponse<BoardListItem>>('/boards', params),
+
+  // 게시판 통계
+  getStats: () => api.get<SuccessResponse<BoardStats>>('/boards/stats'),
+
+  // 게시판 상세 조회
+  getById: (id: number) => api.get<SuccessResponse<Board>>(`/boards/${id}`),
+
+  // 게시판 생성
+  create: (data: BoardCreate) => api.post<SuccessResponse<Board>>('/boards', data),
+
+  // 게시판 수정
+  update: (id: number, data: BoardUpdate) =>
+    api.patch<SuccessResponse<Board>>(`/boards/${id}`, data),
+
+  // 게시판 삭제
+  delete: (id: number) => api.delete<SuccessResponse<null>>(`/boards/${id}`),
+
+  // 게시판 순서 변경
+  reorder: (ids: number[]) => api.post<SuccessResponse<null>>('/boards/reorder', ids),
+};
+
+// 게시글 관리 API (Admin)
+export const postsApi = {
+  // 게시글 목록 조회 (게시판별)
+  getList: (boardId: number, params?: {
+    page?: number;
+    page_size?: number;
+    title?: string;
+    status?: string;
+    is_pinned?: boolean;
+    is_notice?: boolean;
+  }) => api.get<PaginatedResponse<PostListItem>>(`/boards/${boardId}/posts`, params),
+
+  // 게시글 상세 조회
+  getById: (id: number) => api.get<SuccessResponse<Post>>(`/boards/posts/${id}`),
+
+  // 게시글 수정
+  update: (id: number, data: PostUpdate) =>
+    api.patch<SuccessResponse<Post>>(`/boards/posts/${id}`, data),
+
+  // 게시글 삭제
+  delete: (id: number) => api.delete<SuccessResponse<null>>(`/boards/posts/${id}`),
+
+  // 공지 설정
+  setNotice: (id: number, is_notice: boolean) =>
+    api.post<SuccessResponse<Post>>(`/boards/posts/${id}/notice?is_notice=${is_notice}`),
 };

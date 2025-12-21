@@ -10,10 +10,37 @@ import type {
   SlotStats,
   PaginatedResponse,
   SuccessResponse,
+  BoardListItem,
+  PostListItem,
+  Post,
+  PostCreate as SharedPostCreate,
+  PostUpdate,
+  Comment,
+  CommentCreate,
+  CommentUpdate,
 } from '@auction/shared';
 
+// User 앱 전용 타입 (공개 API에서는 board_id가 URL에 포함됨)
+export interface PostCreate extends Omit<SharedPostCreate, 'board_id'> {
+  board_id?: never; // board_id는 URL에서 처리됨
+}
+
 // 타입 re-export
-export type { Product, ProductListItem, SlotListItem, SlotStats, PaginatedResponse, SuccessResponse };
+export type {
+  Product,
+  ProductListItem,
+  SlotListItem,
+  SlotStats,
+  PaginatedResponse,
+  SuccessResponse,
+  BoardListItem,
+  PostListItem,
+  Post,
+  PostUpdate,
+  Comment,
+  CommentCreate,
+  CommentUpdate,
+};
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -52,6 +79,7 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include', // httpOnly 쿠키 자동 전송
     });
 
     if (!response.ok) {
@@ -89,6 +117,17 @@ class ApiClient {
       body: data ? JSON.stringify(data) : undefined,
     });
   }
+
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
+  }
 }
 
 export const api = new ApiClient(API_URL);
@@ -124,4 +163,72 @@ export const slotsApi = {
   // 슬롯 구매 예약 (인증 필요 - 관리자 API)
   purchase: (productId: number, data: { buyer_id: number; slot_numbers: number[]; buyer_note?: string }) =>
     api.post<SuccessResponse<SlotListItem[]>>(`/products/${productId}/slots/purchase`, data),
+};
+
+// 게시판 API (공개 API)
+export const boardsApi = {
+  // 활성 게시판 목록 조회
+  getList: () => api.get<SuccessResponse<BoardListItem[]>>('/public/boards'),
+
+  // 게시판 상세 조회 (slug로 조회)
+  getBySlug: (slug: string) => api.get<SuccessResponse<BoardListItem>>(`/public/boards/${slug}`),
+};
+
+// 게시글 API (공개 API)
+export const postsApi = {
+  // 게시글 목록 조회
+  getList: (boardSlug: string, params?: {
+    page?: number;
+    page_size?: number;
+    title?: string;
+  }) => api.get<PaginatedResponse<PostListItem>>(`/public/boards/${boardSlug}/posts`, params),
+
+  // 게시글 상세 조회
+  getById: (boardSlug: string, postId: number) =>
+    api.get<SuccessResponse<Post>>(`/public/boards/${boardSlug}/posts/${postId}`),
+
+  // 게시글 작성 (로그인 필요)
+  create: (boardSlug: string, data: PostCreate) =>
+    api.post<SuccessResponse<Post>>(`/public/boards/${boardSlug}/posts`, data),
+
+  // 게시글 수정 (작성자만)
+  update: (boardSlug: string, postId: number, data: PostUpdate) =>
+    api.patch<SuccessResponse<Post>>(`/public/boards/${boardSlug}/posts/${postId}`, data),
+
+  // 게시글 삭제 (작성자만)
+  delete: (boardSlug: string, postId: number) =>
+    api.delete<SuccessResponse<null>>(`/public/boards/${boardSlug}/posts/${postId}`),
+
+  // 좋아요 토글 (로그인 필요)
+  toggleLike: (boardSlug: string, postId: number) =>
+    api.post<SuccessResponse<{ liked: boolean; like_count: number }>>(
+      `/public/boards/${boardSlug}/posts/${postId}/like`
+    ),
+};
+
+// 댓글 API (공개 API)
+export const commentsApi = {
+  // 게시글의 댓글 목록 조회
+  getByPost: (boardSlug: string, postId: number) =>
+    api.get<SuccessResponse<Comment[]>>(`/public/boards/${boardSlug}/posts/${postId}/comments`),
+
+  // 댓글 작성 (로그인 필요)
+  create: (boardSlug: string, postId: number, data: CommentCreate) =>
+    api.post<SuccessResponse<Comment>>(
+      `/public/boards/${boardSlug}/posts/${postId}/comments`,
+      data
+    ),
+
+  // 댓글 수정 (작성자만)
+  update: (boardSlug: string, postId: number, commentId: number, data: CommentUpdate) =>
+    api.patch<SuccessResponse<Comment>>(
+      `/public/boards/${boardSlug}/posts/${postId}/comments/${commentId}`,
+      data
+    ),
+
+  // 댓글 삭제 (작성자만)
+  delete: (boardSlug: string, postId: number, commentId: number) =>
+    api.delete<SuccessResponse<null>>(
+      `/public/boards/${boardSlug}/posts/${postId}/comments/${commentId}`
+    ),
 };

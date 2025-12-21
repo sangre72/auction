@@ -25,6 +25,8 @@ from banners.router import router as banners_router
 from visitors.router import router as visitors_router
 from categories.router import router as categories_router
 from wishlist.router import router as wishlist_router
+from boards.router import router as boards_router
+from boards.public_router import router as public_boards_router
 
 
 @asynccontextmanager
@@ -71,6 +73,8 @@ app.include_router(banners_router, prefix="/api")
 app.include_router(visitors_router, prefix="/api")
 app.include_router(categories_router, prefix="/api")
 app.include_router(wishlist_router, prefix="/api")  # 관심 상품
+app.include_router(boards_router, prefix="/api")  # 게시판 관리
+app.include_router(public_boards_router, prefix="/api")  # 공개 게시판 API
 
 
 @app.get("/")

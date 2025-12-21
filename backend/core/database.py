@@ -49,5 +49,6 @@ def init_db() -> None:
     from banners.models import Banner
     from visitors.models import Visitor, DailyStats
     from wishlist.models import Wishlist
+    from boards.models import Board, Post, PostImage, PostAttachment, Comment, PostLike
 
     Base.metadata.create_all(bind=engine)

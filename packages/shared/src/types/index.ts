@@ -366,3 +366,186 @@ export interface DashboardStats {
     current: number;
   };
 }
+
+// ============================================
+// 게시판 관련 타입
+// ============================================
+
+export type BoardReadPermission = 'public' | 'login' | 'admin';
+export type BoardWritePermission = 'login' | 'admin';
+export type BoardCommentPermission = 'disabled' | 'login';
+export type PostStatus = 'draft' | 'published' | 'hidden' | 'deleted';
+
+export interface Board {
+  id: number;
+  name: string;
+  title: string;
+  description?: string;
+  read_permission: BoardReadPermission;
+  write_permission: BoardWritePermission;
+  comment_permission: BoardCommentPermission;
+  is_active: boolean;
+  sort_order: number;
+  allow_attachments: boolean;
+  allow_images: boolean;
+  max_attachments: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardListItem {
+  id: number;
+  name: string;
+  title: string;
+  description?: string;
+  is_active: boolean;
+  sort_order: number;
+  post_count: number;
+}
+
+export interface BoardCreate {
+  name: string;
+  title: string;
+  description?: string;
+  read_permission?: BoardReadPermission;
+  write_permission?: BoardWritePermission;
+  comment_permission?: BoardCommentPermission;
+  is_active?: boolean;
+  sort_order?: number;
+  allow_attachments?: boolean;
+  allow_images?: boolean;
+  max_attachments?: number;
+}
+
+export interface BoardUpdate {
+  name?: string;
+  title?: string;
+  description?: string;
+  read_permission?: BoardReadPermission;
+  write_permission?: BoardWritePermission;
+  comment_permission?: BoardCommentPermission;
+  is_active?: boolean;
+  sort_order?: number;
+  allow_attachments?: boolean;
+  allow_images?: boolean;
+  max_attachments?: number;
+}
+
+export interface BoardStats {
+  total: number;
+  active: number;
+  inactive: number;
+  total_posts: number;
+  today_posts: number;
+}
+
+// ============================================
+// 게시글 관련 타입
+// ============================================
+
+export interface PostAuthor {
+  id: number;
+  name?: string;
+  profile_image?: string;
+}
+
+export interface PostImage {
+  id: number;
+  image_url: string;
+  thumbnail_url?: string;
+  original_filename?: string;
+  sort_order: number;
+}
+
+export interface PostAttachment {
+  id: number;
+  file_url: string;
+  original_filename: string;
+  file_size: number;
+  file_type?: string;
+  download_count: number;
+}
+
+export interface Post {
+  id: number;
+  board_id: number;
+  board_name: string;
+  board_title: string;
+  author?: PostAuthor;
+  title: string;
+  content: string;
+  status: PostStatus;
+  is_pinned: boolean;
+  is_notice: boolean;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  images: PostImage[];
+  attachments: PostAttachment[];
+  is_liked: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PostListItem {
+  id: number;
+  board_id: number;
+  author_name?: string;
+  title: string;
+  status: PostStatus;
+  is_pinned: boolean;
+  is_notice: boolean;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  has_images: boolean;
+  has_attachments: boolean;
+  created_at: string;
+}
+
+export interface PostCreate {
+  board_id: number;
+  title: string;
+  content: string;
+  is_pinned?: boolean;
+  is_notice?: boolean;
+  image_urls?: string[];
+}
+
+export interface PostUpdate {
+  title?: string;
+  content?: string;
+  status?: PostStatus;
+  is_pinned?: boolean;
+  is_notice?: boolean;
+}
+
+export interface PostLikeStatus {
+  is_liked: boolean;
+  like_count: number;
+}
+
+// ============================================
+// 댓글 관련 타입
+// ============================================
+
+export interface Comment {
+  id: number;
+  post_id: number;
+  author?: PostAuthor;
+  parent_id?: number;
+  content: string;
+  is_deleted: boolean;
+  replies: Comment[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentCreate {
+  content: string;
+  parent_id?: number;
+}
+
+export interface CommentUpdate {
+  content: string;
+}
