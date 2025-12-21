@@ -19,28 +19,35 @@ export function Header() {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // API에서 사용자 정보 가져오기 (httpOnly 쿠키 사용)
-    const fetchUser = async () => {
-      try {
-        const response = await fetch(`${BACKEND_URL}/api/user/auth/me`, {
-          credentials: 'include', // 쿠키 포함
-        });
+  const fetchUser = async () => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/user/auth/me`, {
+        credentials: 'include', // 쿠키 포함
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.data);
-        } else {
-          setUser(null);
-        }
-      } catch {
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.data);
+      } else {
         setUser(null);
-      } finally {
-        setIsLoading(false);
       }
+    } catch {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+
+    // 탭이 활성화될 때 세션 확인
+    const handleFocus = () => {
+      fetchUser();
     };
 
-    fetchUser();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
   const handleLogout = async () => {
@@ -56,12 +63,13 @@ export function Header() {
     router.push('/');
   };
 
+  // 마이페이지는 로그인 상태에서만 표시
   const navigation = [
     { name: '홈', href: '/' },
     { name: '경매', href: '/' },
     { name: '중고거래', href: '/used' },
     { name: '공지사항', href: '/board/notice' },
-    { name: '마이페이지', href: '/mypage' },
+    ...(user ? [{ name: '마이페이지', href: '/mypage' }] : []),
   ];
 
   return (

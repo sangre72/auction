@@ -34,8 +34,8 @@ export default function LoginPage() {
         throw new Error(data.detail || '로그인에 실패했습니다.');
       }
 
-      // 홈으로 이동 (토큰은 쿠키에 자동 저장됨)
-      router.push('/');
+      // 홈으로 이동 (전체 새로고침으로 Header 상태 갱신)
+      window.location.href = '/';
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');
     } finally {
