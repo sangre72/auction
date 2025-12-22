@@ -318,33 +318,110 @@ export interface DailyVisitorData {
 // 배너 관련 타입
 // ============================================
 
-export type BannerPosition = 'main_top' | 'main_middle' | 'main_bottom' | 'sidebar' | 'popup';
+export type BannerPosition = 'main_top' | 'main_middle' | 'sidebar' | 'popup' | 'footer';
+export type BannerType = 'image' | 'video' | 'html';
 
 export interface Banner {
   id: number;
   title: string;
-  image_url: string;
-  mobile_image_url?: string;
-  link_url?: string;
+  description?: string;
   position: BannerPosition;
-  priority: number;
+  type: BannerType;
+  image_url?: string;
+  mobile_image_url?: string;
+  alt_text?: string;
+  video_url?: string;
+  html_content?: string;
+  link_url?: string;
+  link_target: string;
   is_active: boolean;
+  sort_order: number;
   start_date?: string;
   end_date?: string;
-  click_count: number;
   view_count: number;
+  click_count: number;
   created_at: string;
   updated_at: string;
 }
 
+export interface BannerListItem {
+  id: number;
+  title: string;
+  position: BannerPosition;
+  type: BannerType;
+  is_active: boolean;
+  sort_order: number;
+  start_date?: string;
+  end_date?: string;
+  view_count: number;
+  click_count: number;
+  created_at: string;
+}
+
 export interface BannerCreate {
   title: string;
-  image_url: string;
+  description?: string;
+  position?: BannerPosition;
+  type?: BannerType;
+  image_url?: string;
   mobile_image_url?: string;
+  alt_text?: string;
+  video_url?: string;
+  html_content?: string;
   link_url?: string;
-  position: BannerPosition;
-  priority?: number;
+  link_target?: string;
   is_active?: boolean;
+  sort_order?: number;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface BannerUpdate {
+  title?: string;
+  description?: string;
+  position?: BannerPosition;
+  type?: BannerType;
+  image_url?: string;
+  mobile_image_url?: string;
+  alt_text?: string;
+  video_url?: string;
+  html_content?: string;
+  link_url?: string;
+  link_target?: string;
+  is_active?: boolean;
+  sort_order?: number;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface BannerPublic {
+  id: number;
+  title: string;
+  description?: string;
+  position: BannerPosition;
+  type: BannerType;
+  image_url?: string;
+  mobile_image_url?: string;
+  alt_text?: string;
+  html_content?: string;
+  link_url?: string;
+  link_target: string;
+  sort_order: number;
+}
+
+export interface BannerStats {
+  total: number;
+  active: number;
+  inactive: number;
+}
+
+export interface BannerDetailStats {
+  id: number;
+  title: string;
+  position: BannerPosition;
+  view_count: number;
+  click_count: number;
+  ctr: number;
   start_date?: string;
   end_date?: string;
 }

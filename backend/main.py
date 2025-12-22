@@ -24,7 +24,7 @@ from products.ws_router import router as products_ws_router
 from payments.router import router as payments_router
 from payments.public_router import router as public_payments_router
 from points.router import router as points_router
-from banners.router import router as banners_router
+from banners.router import router as banners_router, public_router as public_banners_router
 from visitors.router import router as visitors_router
 from categories.router import router as categories_router
 from wishlist.router import router as wishlist_router
@@ -95,6 +95,7 @@ app.include_router(payments_router, prefix="/api")
 app.include_router(public_payments_router, prefix="/api")  # 공개 결제 API
 app.include_router(points_router, prefix="/api")
 app.include_router(banners_router, prefix="/api")
+app.include_router(public_banners_router, prefix="/api")  # 공개 배너 API
 app.include_router(visitors_router, prefix="/api")
 app.include_router(categories_router, prefix="/api")
 app.include_router(wishlist_router, prefix="/api")  # 관심 상품

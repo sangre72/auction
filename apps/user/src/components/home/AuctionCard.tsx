@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQueue } from '@/contexts/QueueContext';
 import { formatPrice } from '@auction/shared';
 
@@ -33,6 +34,7 @@ export function AuctionCard({
   isLiked = false,
   onLike,
 }: AuctionCardProps) {
+  const router = useRouter();
   const [liked, setLiked] = useState(isLiked);
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -41,6 +43,25 @@ export function AuctionCard({
 
   const queueEntry = getQueueEntry(Number(id));
   const isInQueue = queueEntry && !queueEntry.isAllowed;
+
+  // 종료 여부 계산
+  const getTimeRemaining = useCallback(() => {
+    const now = new Date();
+    const diff = endTime.getTime() - now.getTime();
+
+    if (diff <= 0) return null; // 종료됨
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (days > 0) return `${days}일 ${hours}시간`;
+    if (hours > 0) return `${hours}시간 ${minutes}분`;
+    return `${minutes}분`;
+  }, [endTime]);
+
+  const timeRemaining = getTimeRemaining();
+  const isEnded = timeRemaining === null;
 
   // 관심 상품 여부 확인 (마운트 시)
   const checkWishlistStatus = useCallback(async () => {
@@ -64,6 +85,13 @@ export function AuctionCard({
 
   const handleCardClick = async (e: React.MouseEvent) => {
     e.preventDefault();
+
+    // 종료된 경매는 상세 페이지로 이동 (확인만 가능)
+    if (isEnded) {
+      router.push(`/auctions/${id}`);
+      return;
+    }
+
     if (isJoining) return;
 
     setIsJoining(true);
@@ -105,21 +133,6 @@ export function AuctionCard({
     }
   };
 
-  const getTimeRemaining = () => {
-    const now = new Date();
-    const diff = endTime.getTime() - now.getTime();
-
-    if (diff <= 0) return '종료됨';
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (days > 0) return `${days}일 ${hours}시간`;
-    if (hours > 0) return `${hours}시간 ${minutes}분`;
-    return `${minutes}분`;
-  };
-
   const discountRate = Math.round((1 - startPrice / currentPrice) * 100);
 
   return (
@@ -138,8 +151,10 @@ export function AuctionCard({
           </div>
 
           {/* 남은 시간 뱃지 */}
-          <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/70 backdrop-blur-sm text-white text-sm font-medium rounded-lg">
-            {getTimeRemaining()} 남음
+          <div className={`absolute top-3 left-3 px-3 py-1.5 backdrop-blur-sm text-white text-sm font-medium rounded-lg ${
+            isEnded ? 'bg-gray-600/80' : 'bg-black/70'
+          }`}>
+            {isEnded ? '종료됨' : `${timeRemaining} 남음`}
           </div>
 
           {/* 관심 버튼 */}
@@ -192,10 +207,16 @@ export function AuctionCard({
           >
             <div className="absolute bottom-0 left-0 right-0 p-4">
               <button
-                className="w-full py-3 bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-semibold rounded-xl shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-2"
-                disabled={isJoining}
+                className={`w-full py-3 text-white font-semibold rounded-xl shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center gap-2 ${
+                  isEnded
+                    ? 'bg-gray-600'
+                    : 'bg-gradient-to-r from-purple-600 to-cyan-500'
+                }`}
+                disabled={isJoining && !isEnded}
               >
-                {isJoining ? (
+                {isEnded ? (
+                  '결과 확인하기'
+                ) : isJoining ? (
                   <>
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

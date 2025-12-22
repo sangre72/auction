@@ -43,6 +43,7 @@ class Banner(Base):
     # 미디어
     image_url = Column(String(500), nullable=True)
     mobile_image_url = Column(String(500), nullable=True)
+    alt_text = Column(String(255), nullable=True)  # 이미지 대체 텍스트
     video_url = Column(String(500), nullable=True)
     html_content = Column(Text, nullable=True)
 

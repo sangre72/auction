@@ -1,45 +1,94 @@
 'use client';
 
-import { useState } from 'react';
-import { Button, SearchInput, Badge, Card, DataGrid, Tooltip, Tabs } from '@/components/ui';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button, SearchInput, Badge, Card, DataGrid, Tooltip, Tabs, Pagination } from '@/components/ui';
+import { bannersApi, BannerListItem, BannerStats } from '@/lib/api';
 
-// 데모용 배너 데이터
-const banners = [
-  { id: '1', title: '연말 대세일', position: 'main_top', isActive: true, priority: 1, clicks: 1234, views: 45678, startDate: '2025-12-01', endDate: '2025-12-31' },
-  { id: '2', title: '신규 회원 이벤트', position: 'main_middle', isActive: true, priority: 2, clicks: 567, views: 23456, startDate: '2025-12-15', endDate: '2026-01-15' },
-  { id: '3', title: '앱 다운로드', position: 'sidebar', isActive: true, priority: 1, clicks: 890, views: 12345, startDate: '2025-11-01', endDate: null },
-  { id: '4', title: '블랙프라이데이', position: 'popup', isActive: false, priority: 1, clicks: 2345, views: 56789, startDate: '2025-11-24', endDate: '2025-11-30' },
-  { id: '5', title: '크리스마스 특가', position: 'main_top', isActive: false, priority: 2, clicks: 0, views: 0, startDate: '2025-12-24', endDate: '2025-12-26' },
-];
-
-type Position = 'main_top' | 'main_middle' | 'main_bottom' | 'sidebar' | 'popup';
+type Position = 'main_top' | 'main_middle' | 'sidebar' | 'popup' | 'footer';
 
 const positionLabels: Record<Position, string> = {
   main_top: '메인 상단',
   main_middle: '메인 중간',
-  main_bottom: '메인 하단',
   sidebar: '사이드바',
   popup: '팝업',
+  footer: '푸터',
 };
 
 export default function BannersPage() {
+  const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [banners, setBanners] = useState<BannerListItem[]>([]);
+  const [stats, setStats] = useState<BannerStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filteredBanners = banners.filter(
-    (b) => b.title.includes(searchValue)
-  ).filter(b => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'active') return b.isActive;
-    if (activeTab === 'inactive') return !b.isActive;
-    return true;
-  });
+  const fetchBanners = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const params: {
+        page: number;
+        page_size: number;
+        title?: string;
+        is_active?: boolean;
+      } = { page, page_size: 20 };
+
+      if (searchValue) params.title = searchValue;
+      if (activeTab === 'active') params.is_active = true;
+      if (activeTab === 'inactive') params.is_active = false;
+
+      const response = await bannersApi.getList(params);
+      setBanners(response.data);
+      setTotalPages(response.meta.total_pages);
+    } catch (error) {
+      console.error('Failed to fetch banners:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, searchValue, activeTab]);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const response = await bannersApi.getStats();
+      setStats(response.data);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBanners();
+    fetchStats();
+  }, [fetchBanners, fetchStats]);
+
+  const handleToggle = async (id: number) => {
+    try {
+      await bannersApi.toggle(id);
+      fetchBanners();
+      fetchStats();
+    } catch (error) {
+      console.error('Failed to toggle banner:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    try {
+      await bannersApi.delete(id);
+      fetchBanners();
+      fetchStats();
+    } catch (error) {
+      console.error('Failed to delete banner:', error);
+    }
+  };
 
   const columns = [
     {
       key: 'title' as const,
       header: '제목',
-      render: (item: typeof banners[0]) => (
+      render: (item: BannerListItem) => (
         <div className="flex items-center gap-3">
           <div className="w-12 h-8 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 flex items-center justify-center">
             <ImageIcon className="w-4 h-4 text-white" />
@@ -51,42 +100,42 @@ export default function BannersPage() {
     {
       key: 'position' as const,
       header: '위치',
-      render: (item: typeof banners[0]) => (
-        <Badge variant="default">{positionLabels[item.position as Position]}</Badge>
+      render: (item: BannerListItem) => (
+        <Badge variant="default">{positionLabels[item.position as Position] || item.position}</Badge>
       ),
     },
     {
-      key: 'isActive' as const,
+      key: 'is_active' as const,
       header: '상태',
-      render: (item: typeof banners[0]) => (
-        <Badge variant={item.isActive ? 'success' : 'default'}>
-          {item.isActive ? '활성' : '비활성'}
+      render: (item: BannerListItem) => (
+        <Badge variant={item.is_active ? 'success' : 'default'}>
+          {item.is_active ? '활성' : '비활성'}
         </Badge>
       ),
     },
     {
-      key: 'priority' as const,
-      header: '우선순위',
-      render: (item: typeof banners[0]) => (
-        <span className="text-purple-400 font-medium">{item.priority}</span>
+      key: 'sort_order' as const,
+      header: '순서',
+      render: (item: BannerListItem) => (
+        <span className="text-purple-400 font-medium">{item.sort_order}</span>
       ),
     },
     {
       key: 'performance' as const,
       header: '클릭/노출',
-      render: (item: typeof banners[0]) => (
+      render: (item: BannerListItem) => (
         <div className="text-sm">
-          <span className="text-cyan-400">{item.clicks.toLocaleString()}</span>
+          <span className="text-cyan-400">{item.click_count.toLocaleString()}</span>
           <span className="text-gray-500"> / </span>
-          <span className="text-gray-400">{item.views.toLocaleString()}</span>
+          <span className="text-gray-400">{item.view_count.toLocaleString()}</span>
         </div>
       ),
     },
     {
       key: 'ctr' as const,
       header: 'CTR',
-      render: (item: typeof banners[0]) => {
-        const ctr = item.views > 0 ? ((item.clicks / item.views) * 100).toFixed(1) : '0.0';
+      render: (item: BannerListItem) => {
+        const ctr = item.view_count > 0 ? ((item.click_count / item.view_count) * 100).toFixed(1) : '0.0';
         return (
           <span className={`font-medium ${parseFloat(ctr) >= 3 ? 'text-emerald-400' : 'text-gray-400'}`}>
             {ctr}%
@@ -97,27 +146,54 @@ export default function BannersPage() {
     {
       key: 'period' as const,
       header: '기간',
-      render: (item: typeof banners[0]) => (
+      render: (item: BannerListItem) => (
         <span className="text-gray-500 text-sm">
-          {item.startDate} ~ {item.endDate || '무기한'}
+          {item.start_date ? new Date(item.start_date).toLocaleDateString() : '-'} ~ {item.end_date ? new Date(item.end_date).toLocaleDateString() : '무기한'}
         </span>
       ),
     },
     {
       key: 'actions' as const,
       header: '관리',
-      render: (item: typeof banners[0]) => (
+      render: (item: BannerListItem) => (
         <div className="flex gap-2">
           <Tooltip content="수정">
-            <Button variant="ghost" size="sm">수정</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/banners/${item.id}`);
+              }}
+            >
+              수정
+            </Button>
           </Tooltip>
-          <Tooltip content={item.isActive ? '비활성화' : '활성화'}>
-            <Button variant="ghost" size="sm" className={item.isActive ? 'text-amber-400' : 'text-emerald-400'}>
-              {item.isActive ? '중지' : '시작'}
+          <Tooltip content={item.is_active ? '비활성화' : '활성화'}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={item.is_active ? 'text-amber-400' : 'text-emerald-400'}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggle(item.id);
+              }}
+            >
+              {item.is_active ? '중지' : '시작'}
             </Button>
           </Tooltip>
           <Tooltip content="삭제">
-            <Button variant="ghost" size="sm" className="text-red-400">삭제</Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-400"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(item.id);
+              }}
+            >
+              삭제
+            </Button>
           </Tooltip>
         </div>
       ),
@@ -125,9 +201,9 @@ export default function BannersPage() {
   ];
 
   const tabs = [
-    { id: 'all', label: '전체' },
-    { id: 'active', label: '활성' },
-    { id: 'inactive', label: '비활성' },
+    { id: 'all', label: `전체 (${stats?.total || 0})` },
+    { id: 'active', label: `활성 (${stats?.active || 0})` },
+    { id: 'inactive', label: `비활성 (${stats?.inactive || 0})` },
   ];
 
   return (
@@ -138,57 +214,90 @@ export default function BannersPage() {
           <h1 className="text-2xl font-bold text-white">배너 광고 관리</h1>
           <p className="text-gray-400">배너 광고를 등록하고 관리합니다.</p>
         </div>
-        <Button leftIcon={<PlusIcon />}>배너 등록</Button>
+        <Button leftIcon={<PlusIcon />} onClick={() => router.push('/banners/new')}>
+          배너 등록
+        </Button>
       </div>
 
       {/* 통계 카드 */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard
           label="활성 배너"
-          value="3개"
+          value={`${stats?.active || 0}개`}
           icon={<ImageIcon />}
           color="emerald"
         />
         <StatCard
-          label="오늘 노출"
-          value="12,345"
-          subValue="+15% 어제 대비"
-          icon={<EyeIcon />}
+          label="비활성 배너"
+          value={`${stats?.inactive || 0}개`}
+          icon={<ImageIcon />}
+          color="amber"
+        />
+        <StatCard
+          label="전체 배너"
+          value={`${stats?.total || 0}개`}
+          icon={<ChartIcon />}
           color="purple"
         />
         <StatCard
-          label="오늘 클릭"
-          value="567"
-          subValue="+8% 어제 대비"
-          icon={<CursorIcon />}
-          color="cyan"
-        />
-        <StatCard
-          label="평균 CTR"
-          value="4.5%"
+          label="통계"
+          value="상세보기"
           icon={<ChartIcon />}
-          color="amber"
+          color="cyan"
+          onClick={() => router.push('/banners/stats')}
         />
       </div>
 
       {/* 검색 및 필터 */}
       <Card className="p-4">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          <Tabs
+            tabs={tabs}
+            activeTab={activeTab}
+            onChange={(tab) => {
+              setActiveTab(tab);
+              setPage(1);
+            }}
+          />
           <SearchInput
             className="w-full md:w-80"
             placeholder="배너 제목 검색..."
-            onSearch={setSearchValue}
+            onSearch={(value) => {
+              setSearchValue(value);
+              setPage(1);
+            }}
           />
         </div>
       </Card>
 
       {/* 배너 목록 */}
-      <DataGrid
-        data={filteredBanners}
-        columns={columns}
-        onRowClick={(item) => console.log('배너 클릭:', item)}
-      />
+      {isLoading ? (
+        <div className="flex justify-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-purple-500 border-t-transparent" />
+        </div>
+      ) : banners.length === 0 ? (
+        <div className="text-center py-20">
+          <div className="text-6xl mb-4">🖼️</div>
+          <p className="text-gray-400">등록된 배너가 없습니다.</p>
+        </div>
+      ) : (
+        <>
+          <DataGrid
+            data={banners}
+            columns={columns}
+            onRowClick={(item) => router.push(`/banners/${item.id}`)}
+          />
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-4">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -200,12 +309,14 @@ function StatCard({
   subValue,
   icon,
   color,
+  onClick,
 }: {
   label: string;
   value: string;
   subValue?: string;
   icon: React.ReactNode;
   color: 'purple' | 'emerald' | 'amber' | 'cyan';
+  onClick?: () => void;
 }) {
   const colors = {
     purple: 'from-purple-500/10 to-purple-500/5 border-purple-500/20',
@@ -222,7 +333,10 @@ function StatCard({
   };
 
   return (
-    <div className={`rounded-2xl bg-gradient-to-br ${colors[color]} border p-6`}>
+    <div
+      className={`rounded-2xl bg-gradient-to-br ${colors[color]} border p-6 ${onClick ? 'cursor-pointer hover:border-white/20' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-gray-400">{label}</span>
         <div className={`p-2 rounded-xl ${iconColors[color]}`}>{icon}</div>
@@ -246,23 +360,6 @@ function ImageIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-    </svg>
-  );
-}
-
-function CursorIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
     </svg>
   );
 }

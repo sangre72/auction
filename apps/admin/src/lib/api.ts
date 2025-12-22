@@ -38,6 +38,13 @@ import type {
   UserStats,
   UserStatus,
   UserProvider,
+  Banner,
+  BannerListItem,
+  BannerCreate,
+  BannerUpdate,
+  BannerStats,
+  BannerDetailStats,
+  BannerPosition,
 } from '@auction/shared';
 
 // 타입 re-export
@@ -74,6 +81,13 @@ export type {
   UserStats,
   UserStatus,
   UserProvider,
+  Banner,
+  BannerListItem,
+  BannerCreate,
+  BannerUpdate,
+  BannerStats,
+  BannerDetailStats,
+  BannerPosition,
 };
 
 // 보안 타입은 @auction/shared에서 직접 import
@@ -487,4 +501,42 @@ export const usersApi = {
 
   // 사용자 삭제 (소프트 삭제)
   delete: (id: number) => api.delete<SuccessResponse<null>>(`/users/${id}`),
+};
+
+// 배너 관리 API
+export const bannersApi = {
+  // 배너 목록 조회
+  getList: (params?: {
+    page?: number;
+    page_size?: number;
+    title?: string;
+    position?: BannerPosition;
+    is_active?: boolean;
+  }) => api.get<PaginatedResponse<BannerListItem>>('/banners', params),
+
+  // 배너 통계
+  getStats: () => api.get<SuccessResponse<BannerStats>>('/banners/stats'),
+
+  // 배너 상세 통계 (조회수, 클릭수, CTR)
+  getDetailStats: () => api.get<SuccessResponse<BannerDetailStats[]>>('/banners/detail-stats'),
+
+  // 배너 상세 조회
+  getById: (id: number) => api.get<SuccessResponse<Banner>>(`/banners/${id}`),
+
+  // 배너 생성
+  create: (data: BannerCreate) => api.post<SuccessResponse<Banner>>('/banners', data),
+
+  // 배너 수정
+  update: (id: number, data: BannerUpdate) =>
+    api.patch<SuccessResponse<Banner>>(`/banners/${id}`, data),
+
+  // 배너 삭제
+  delete: (id: number) => api.delete<SuccessResponse<null>>(`/banners/${id}`),
+
+  // 배너 활성화/비활성화 토글
+  toggle: (id: number) => api.post<SuccessResponse<Banner>>(`/banners/${id}/toggle`),
+
+  // 배너 순서 변경
+  reorder: (orders: { id: number; sort_order: number }[]) =>
+    api.post<SuccessResponse<null>>('/banners/sort', orders),
 };

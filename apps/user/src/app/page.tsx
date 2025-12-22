@@ -41,12 +41,24 @@ export default function Home() {
 
   const getSortedProducts = () => {
     const sorted = [...products];
+    const now = Date.now();
 
     switch (activeSort) {
       case 'ending':
         return sorted.sort((a, b) => {
           const aTime = a.end_time ? new Date(a.end_time).getTime() : Infinity;
           const bTime = b.end_time ? new Date(b.end_time).getTime() : Infinity;
+          const aEnded = aTime <= now;
+          const bEnded = bTime <= now;
+
+          // 종료된 것은 아래로
+          if (aEnded && !bEnded) return 1;
+          if (!aEnded && bEnded) return -1;
+
+          // 종료된 것끼리는 최근 종료 순
+          if (aEnded && bEnded) return bTime - aTime;
+
+          // 진행 중인 것은 마감 임박 순
           return aTime - bTime;
         });
       case 'popular':

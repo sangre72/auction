@@ -2,8 +2,10 @@
 배너 서비스
 """
 
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 
 from common.errors import NotFoundException
 from common.pagination import Pagination, PaginationParams
@@ -14,6 +16,7 @@ from .schemas import (
     BannerResponse,
     BannerListResponse,
     BannerSearchParams,
+    BannerPublicResponse,
 )
 
 
@@ -133,3 +136,61 @@ class BannerService:
             "active": active,
             "inactive": total - active,
         }
+
+    # ============================================
+    # 공개 API (사용자용)
+    # ============================================
+
+    def get_active_banners(self, position: str) -> list[BannerPublicResponse]:
+        """활성화된 배너 목록 조회 (사용자용)"""
+        now = datetime.now(timezone.utc)
+
+        query = self.db.query(Banner).filter(
+            and_(
+                Banner.is_active == True,
+                Banner.position == position,
+                # 시작일 조건: 시작일이 없거나 현재 시간 이후
+                (Banner.start_date == None) | (Banner.start_date <= now),
+                # 종료일 조건: 종료일이 없거나 현재 시간 이전
+                (Banner.end_date == None) | (Banner.end_date >= now),
+            )
+        ).order_by(Banner.sort_order.asc())
+
+        banners = query.all()
+        return [BannerPublicResponse.model_validate(b) for b in banners]
+
+    def record_view(self, banner_id: int) -> bool:
+        """배너 조회수 기록"""
+        result = self.db.query(Banner).filter(Banner.id == banner_id).update(
+            {"view_count": Banner.view_count + 1}
+        )
+        self.db.commit()
+        return result > 0
+
+    def record_click(self, banner_id: int) -> bool:
+        """배너 클릭수 기록"""
+        result = self.db.query(Banner).filter(Banner.id == banner_id).update(
+            {"click_count": Banner.click_count + 1}
+        )
+        self.db.commit()
+        return result > 0
+
+    def get_banner_detail_stats(self) -> list[dict]:
+        """배너별 상세 통계"""
+        banners = self.db.query(Banner).filter(Banner.is_active == True).all()
+
+        stats = []
+        for banner in banners:
+            ctr = (banner.click_count / banner.view_count * 100) if banner.view_count > 0 else 0
+            stats.append({
+                "id": banner.id,
+                "title": banner.title,
+                "position": banner.position,
+                "view_count": banner.view_count,
+                "click_count": banner.click_count,
+                "ctr": round(ctr, 2),
+                "start_date": banner.start_date,
+                "end_date": banner.end_date,
+            })
+
+        return stats

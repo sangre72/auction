@@ -16,10 +16,11 @@ class BannerCreate(BaseModel):
     type: str = "image"
     image_url: Optional[str] = None
     mobile_image_url: Optional[str] = None
+    alt_text: Optional[str] = None
     video_url: Optional[str] = None
     html_content: Optional[str] = None
     link_url: Optional[str] = None
-    link_target: str = "_self"
+    link_target: str = "_blank"  # 새 창에서 열기 기본값
     is_active: bool = True
     sort_order: int = 0
     start_date: Optional[datetime] = None
@@ -35,6 +36,7 @@ class BannerUpdate(BaseModel):
     type: Optional[str] = None
     image_url: Optional[str] = None
     mobile_image_url: Optional[str] = None
+    alt_text: Optional[str] = None
     video_url: Optional[str] = None
     html_content: Optional[str] = None
     link_url: Optional[str] = None
@@ -55,6 +57,7 @@ class BannerResponse(BaseModel):
     type: str
     image_url: Optional[str] = None
     mobile_image_url: Optional[str] = None
+    alt_text: Optional[str] = None
     video_url: Optional[str] = None
     html_content: Optional[str] = None
     link_url: Optional[str] = None
@@ -98,3 +101,23 @@ class BannerSearchParams(BaseModel):
     position: Optional[str] = None
     type: Optional[str] = None
     is_active: Optional[bool] = None
+
+
+class BannerPublicResponse(BaseModel):
+    """배너 공개 응답 (사용자용)"""
+
+    id: int
+    title: str
+    description: Optional[str] = None
+    position: str
+    type: str
+    image_url: Optional[str] = None
+    mobile_image_url: Optional[str] = None
+    alt_text: Optional[str] = None
+    html_content: Optional[str] = None
+    link_url: Optional[str] = None
+    link_target: str
+    sort_order: int
+
+    class Config:
+        from_attributes = True

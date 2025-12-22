@@ -58,7 +58,7 @@ importers:
         specifier: ^5.9.6
         version: 5.10.0
       next:
-        specifier: ^15.1.0
+        specifier: ^15.5.9
         version: 15.5.9(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react:
         specifier: ^19.0.0
@@ -101,7 +101,7 @@ importers:
         specifier: ^9.16.0
         version: 9.39.2(jiti@1.21.7)
       eslint-config-next:
-        specifier: ^15.1.0
+        specifier: ^15.5.9
         version: 15.5.9(eslint@9.39.2(jiti@1.21.7))(typescript@5.9.3)
       postcss:
         specifier: ^8.4.49
@@ -128,7 +128,7 @@ importers:
         specifier: ^12.23.26
         version: 12.23.26(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       next:
-        specifier: ^15.1.0
+        specifier: ^15.5.9
         version: 15.5.9(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       react:
         specifier: ^19.0.0
@@ -159,7 +159,7 @@ importers:
         specifier: ^9.16.0
         version: 9.39.2(jiti@1.21.7)
       eslint-config-next:
-        specifier: ^15.1.0
+        specifier: ^15.5.9
         version: 15.5.9(eslint@9.39.2(jiti@1.21.7))(typescript@5.9.3)
       postcss:
         specifier: ^8.4.49
@@ -176,6 +176,9 @@ importers:
       '@auction/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

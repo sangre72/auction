@@ -21,6 +21,7 @@ import type {
   Comment,
   CommentCreate,
   CommentUpdate,
+  BannerPublic,
 } from '@auction/shared';
 
 // User 앱 전용 타입 (공개 API에서는 board_id가 URL에 포함됨)
@@ -44,6 +45,7 @@ export type {
   Comment,
   CommentCreate,
   CommentUpdate,
+  BannerPublic,
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -255,4 +257,19 @@ export const commentsApi = {
     api.delete<SuccessResponse<null>>(
       `/public/boards/${boardSlug}/posts/${postId}/comments/${commentId}`
     ),
+};
+
+// 배너 API (공개 API)
+export const bannersApi = {
+  // 활성 배너 목록 조회 (위치별)
+  getActive: (position: string = 'main_top') =>
+    api.get<SuccessResponse<BannerPublic[]>>('/public/banners', { position }),
+
+  // 배너 조회수 기록
+  recordView: (bannerId: number) =>
+    api.post<SuccessResponse<null>>(`/public/banners/${bannerId}/view`),
+
+  // 배너 클릭수 기록
+  recordClick: (bannerId: number) =>
+    api.post<SuccessResponse<null>>(`/public/banners/${bannerId}/click`),
 };
