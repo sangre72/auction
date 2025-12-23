@@ -9,21 +9,23 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from typing import Optional
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import bcrypt
-from jose import jwt
 
 from core.database import get_db
 from core.config import settings
-from core.security import get_current_user_from_cookie
+from core.security import (
+    get_current_user_from_cookie,
+    create_token_pair,
+    verify_refresh_token,
+    USER_TOKEN_COOKIE,
+    USER_REFRESH_TOKEN_COOKIE,
+)
+from core.token_blacklist import add_token_to_blacklist, is_token_blacklisted
 from common.responses import SuccessResponse
 from users.models import User, AuthProvider, UserStatus
 
 router = APIRouter(prefix="/user/auth", tags=["회원 인증"])
-
-# 쿠키 설정
-COOKIE_NAME = "user_token"
-COOKIE_MAX_AGE = 60 * 60 * 24 * 7  # 7일 (초 단위)
 
 
 # ============ Schemas ============
@@ -45,6 +47,14 @@ class UserLoginRequest(BaseModel):
 class UserLoginResponse(BaseModel):
     """로그인 응답 (토큰은 httpOnly 쿠키로 전달)"""
     user: dict
+    expires_in: int
+    refresh_expires_in: int
+
+
+class UserTokenRefreshResponse(BaseModel):
+    """토큰 갱신 응답"""
+    expires_in: int
+    refresh_expires_in: int
 
 
 class UserInfoResponse(BaseModel):
@@ -71,37 +81,32 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
 
 
-def create_user_token(user: User) -> str:
-    """사용자용 JWT 토큰 생성"""
-    payload = {
-        "sub": str(user.id),
-        "email": user.email,
-        "name": user.name,
-        "type": "user",
-        "exp": datetime.now(timezone.utc) + timedelta(days=7),
-    }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
-
-
-def set_auth_cookie(response: Response, token: str):
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str):
     """httpOnly 쿠키에 토큰 설정"""
     response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        max_age=COOKIE_MAX_AGE,
-        httponly=True,  # JavaScript에서 접근 불가
-        secure=not settings.DEBUG,  # HTTPS에서만 전송 (프로덕션)
-        samesite="lax",  # CSRF 방지
+        key=USER_TOKEN_COOKIE,
+        value=access_token,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="lax",
         path="/",
+    )
+    response.set_cookie(
+        key=USER_REFRESH_TOKEN_COOKIE,
+        value=refresh_token,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="lax",
+        path="/api/user/auth/refresh",
     )
 
 
-def clear_auth_cookie(response: Response):
+def clear_auth_cookies(response: Response):
     """인증 쿠키 삭제"""
-    response.delete_cookie(
-        key=COOKIE_NAME,
-        path="/",
-    )
+    response.delete_cookie(key=USER_TOKEN_COOKIE, path="/")
+    response.delete_cookie(key=USER_REFRESH_TOKEN_COOKIE, path="/api/user/auth/refresh")
 
 
 # ============ Endpoints ============
@@ -148,9 +153,14 @@ async def register(
     db.commit()
     db.refresh(user)
 
-    # 토큰 생성 및 쿠키 설정
-    token = create_user_token(user)
-    set_auth_cookie(response, token)
+    # 토큰 쌍 생성 및 쿠키 설정
+    token_data = {
+        "sub": str(user.id),
+        "email": user.email,
+        "name": user.name,
+    }
+    access_token, refresh_token = create_token_pair(data=token_data, token_type="user")
+    set_auth_cookies(response, access_token, refresh_token)
 
     return SuccessResponse(
         message="회원가입이 완료되었습니다.",
@@ -160,7 +170,9 @@ async def register(
                 "email": user.email,
                 "name": user.name,
                 "nickname": user.nickname,
-            }
+            },
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            refresh_expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         )
     )
 
@@ -230,9 +242,14 @@ async def login(
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
 
-    # 토큰 생성 및 쿠키 설정
-    token = create_user_token(user)
-    set_auth_cookie(response, token)
+    # 토큰 쌍 생성 및 쿠키 설정
+    token_data = {
+        "sub": str(user.id),
+        "email": user.email,
+        "name": user.name,
+    }
+    access_token, refresh_token = create_token_pair(data=token_data, token_type="user")
+    set_auth_cookies(response, access_token, refresh_token)
 
     return SuccessResponse(
         message="로그인 성공",
@@ -242,7 +259,9 @@ async def login(
                 "email": user.email,
                 "name": user.name,
                 "nickname": user.nickname,
-            }
+            },
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            refresh_expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         )
     )
 
@@ -274,10 +293,109 @@ async def get_me(
     )
 
 
+@router.post("/refresh", response_model=SuccessResponse[UserTokenRefreshResponse])
+async def refresh_token(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """
+    Access Token 갱신
+    """
+    refresh_token = request.cookies.get(USER_REFRESH_TOKEN_COOKIE)
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token이 없습니다")
+
+    # Refresh Token 검증
+    payload = verify_refresh_token(refresh_token, token_type="user")
+    if not payload:
+        raise HTTPException(status_code=401, detail="유효하지 않은 refresh token입니다")
+
+    # 블랙리스트 확인
+    jti = payload.get("jti")
+    if jti and await is_token_blacklisted(jti, db):
+        raise HTTPException(status_code=401, detail="이미 로그아웃된 토큰입니다")
+
+    # 사용자 정보 조회
+    user_id = int(payload.get("sub"))
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.status != UserStatus.ACTIVE.value:
+        raise HTTPException(status_code=401, detail="유효하지 않은 사용자입니다")
+
+    # 이전 토큰 블랙리스트에 추가
+    if jti:
+        exp = payload.get("exp")
+        if exp:
+            expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+            await add_token_to_blacklist(
+                jti=jti,
+                expires_at=expires_at,
+                token_type="refresh",
+                user_type="user",
+                user_id=user_id,
+                db=db,
+            )
+
+    # 새 토큰 발급
+    token_data = {
+        "sub": str(user.id),
+        "email": user.email,
+        "name": user.name,
+    }
+    new_access, new_refresh = create_token_pair(token_data, token_type="user")
+    set_auth_cookies(response, new_access, new_refresh)
+
+    return SuccessResponse(
+        message="토큰 갱신 성공",
+        data=UserTokenRefreshResponse(
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            refresh_expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        )
+    )
+
+
 @router.post("/logout", response_model=SuccessResponse[None])
-async def logout(response: Response):
+async def logout(
+    request: Request,
+    response: Response,
+    current_user: dict = Depends(get_current_user_from_cookie),
+    db: Session = Depends(get_db),
+):
     """
-    로그아웃 (httpOnly 쿠키 삭제)
+    로그아웃 - 토큰을 블랙리스트에 추가
     """
-    clear_auth_cookie(response)
+    # Access Token 블랙리스트 추가
+    jti = current_user.get("jti")
+    exp = current_user.get("exp")
+    if jti and exp:
+        expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+        await add_token_to_blacklist(
+            jti=jti,
+            expires_at=expires_at,
+            token_type="access",
+            user_type="user",
+            user_id=current_user.get("id"),
+            db=db,
+        )
+
+    # Refresh Token 블랙리스트 추가
+    refresh_token = request.cookies.get(USER_REFRESH_TOKEN_COOKIE)
+    if refresh_token:
+        payload = verify_refresh_token(refresh_token, token_type="user")
+        if payload:
+            refresh_jti = payload.get("jti")
+            refresh_exp = payload.get("exp")
+            if refresh_jti and refresh_exp:
+                expires_at = datetime.fromtimestamp(refresh_exp, tz=timezone.utc)
+                await add_token_to_blacklist(
+                    jti=refresh_jti,
+                    expires_at=expires_at,
+                    token_type="refresh",
+                    user_type="user",
+                    user_id=current_user.get("id"),
+                    db=db,
+                )
+
+    # 쿠키 삭제
+    clear_auth_cookies(response)
     return SuccessResponse(message="로그아웃 성공")

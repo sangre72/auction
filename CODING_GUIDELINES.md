@@ -6,15 +6,17 @@
 
 1. [TypeScript 규칙](#typescript-규칙)
 2. [React/Next.js 규칙](#reactnextjs-규칙)
-3. [에러 처리](#에러-처리)
-4. [네이밍 컨벤션](#네이밍-컨벤션)
-5. [파일 구조](#파일-구조)
-6. [모듈화 가이드라인](#모듈화-가이드라인)
-7. [주석 및 문서화](#주석-및-문서화)
-8. [보안 규칙](#보안-규칙)
-9. [성능 최적화](#성능-최적화)
-10. [테스트](#테스트)
-11. [Git 커밋 메시지](#git-커밋-메시지)
+3. [Python/FastAPI 규칙](#pythonfastapi-규칙)
+4. [API 설계 규칙](#api-설계-규칙)
+5. [에러 처리](#에러-처리)
+6. [네이밍 컨벤션](#네이밍-컨벤션)
+7. [파일 구조](#파일-구조)
+8. [모듈화 가이드라인](#모듈화-가이드라인)
+9. [주석 및 문서화](#주석-및-문서화)
+10. [보안 규칙](#보안-규칙)
+11. [성능 최적화](#성능-최적화)
+12. [테스트](#테스트)
+13. [Git 커밋 메시지](#git-커밋-메시지)
 
 ## TypeScript 규칙
 
@@ -186,6 +188,240 @@ export default async function handler(req: NextRequest) {
   if (req.method === 'GET') { } // ❌
   if (req.method === 'POST') { } // ❌
 }
+```
+
+## Python/FastAPI 규칙
+
+### 1. 타입 힌트 필수
+
+```python
+# ✅ 타입 힌트 사용
+def get_user(user_id: int) -> User:
+    return db.query(User).filter(User.id == user_id).first()
+
+# ✅ Optional 타입
+def find_user(email: str | None = None) -> User | None:
+    if email:
+        return db.query(User).filter(User.email == email).first()
+    return None
+
+# ❌ 타입 힌트 없이
+def get_user(user_id):
+    return db.query(User).filter(User.id == user_id).first()
+```
+
+### 2. Pydantic 스키마
+
+```python
+# ✅ 요청/응답 스키마 분리
+class ProductCreate(BaseModel):
+    """상품 생성 요청"""
+    title: str = Field(..., min_length=1, max_length=200)
+    price: int = Field(..., gt=0)
+    description: str | None = None
+
+class ProductResponse(BaseModel):
+    """상품 응답"""
+    id: int
+    title: str
+    price: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+# ✅ 필드 검증
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=4)
+
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 4:
+            raise ValueError('비밀번호는 4자 이상이어야 합니다')
+        return v
+```
+
+### 3. 라우터 구조
+
+```python
+# ✅ RESTful 엔드포인트
+router = APIRouter()
+
+@router.get("/", response_model=PaginatedResponse[ProductResponse])
+async def list_products(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+) -> PaginatedResponse[ProductResponse]:
+    """상품 목록 조회"""
+    return crud.get_products(db, page, page_size)
+
+@router.get("/{product_id}", response_model=SuccessResponse[ProductResponse])
+async def get_product(
+    product_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db)
+) -> SuccessResponse[ProductResponse]:
+    """상품 상세 조회"""
+    product = crud.get_product(db, product_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="상품을 찾을 수 없습니다")
+    return SuccessResponse(data=product)
+```
+
+### 4. 의존성 주입
+
+```python
+# ✅ 인증 의존성
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    """현재 로그인 사용자 조회"""
+    payload = decode_token(token)
+    user = db.query(User).filter(User.id == payload.sub).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="인증 실패")
+    return user
+
+# ✅ 관리자 권한 확인
+async def require_admin(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """관리자 권한 필수"""
+    if current_user.role not in ('admin', 'super_admin'):
+        raise HTTPException(status_code=403, detail="권한이 없습니다")
+    return current_user
+```
+
+### 5. 비동기 처리
+
+```python
+# ✅ async/await 사용
+@router.post("/")
+async def create_product(
+    data: ProductCreate,
+    db: Session = Depends(get_db)
+) -> SuccessResponse[ProductResponse]:
+    product = await crud.create_product(db, data)
+    return SuccessResponse(data=product)
+
+# ✅ 동기 작업은 run_in_executor 사용
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+executor = ThreadPoolExecutor(max_workers=4)
+
+async def process_image(image_path: str) -> str:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(executor, _process_image_sync, image_path)
+```
+
+## API 설계 규칙
+
+### 1. URL 규칙
+
+```python
+# ✅ 복수형 명사 사용
+GET    /api/products           # 목록
+POST   /api/products           # 생성
+GET    /api/products/{id}      # 상세
+PUT    /api/products/{id}      # 전체 수정
+PATCH  /api/products/{id}      # 부분 수정
+DELETE /api/products/{id}      # 삭제
+
+# ✅ 중첩 리소스
+GET    /api/products/{id}/slots      # 상품의 슬롯 목록
+POST   /api/products/{id}/slots      # 슬롯 생성
+
+# ❌ 동사 사용 금지
+GET    /api/getProducts        # ❌
+POST   /api/createProduct      # ❌
+```
+
+### 2. 응답 형식
+
+```python
+# ✅ 성공 응답 (단일)
+{
+    "success": true,
+    "message": "조회 성공",
+    "data": { "id": 1, "title": "상품명" }
+}
+
+# ✅ 성공 응답 (목록 + 페이지네이션)
+{
+    "success": true,
+    "data": [{ "id": 1 }, { "id": 2 }],
+    "meta": {
+        "page": 1,
+        "page_size": 20,
+        "total_count": 100,
+        "total_pages": 5,
+        "has_next": true,
+        "has_prev": false
+    }
+}
+
+# ✅ 에러 응답
+{
+    "success": false,
+    "message": "상품을 찾을 수 없습니다",
+    "error_code": "PRODUCT_NOT_FOUND",
+    "details": { "product_id": 999 }
+}
+```
+
+### 3. HTTP 상태 코드
+
+| 상태 코드 | 용도 |
+|---------|------|
+| 200 | 성공 (조회, 수정) |
+| 201 | 생성 성공 |
+| 204 | 삭제 성공 (본문 없음) |
+| 400 | 잘못된 요청 (검증 실패) |
+| 401 | 인증 필요 |
+| 403 | 권한 없음 |
+| 404 | 리소스 없음 |
+| 409 | 충돌 (중복) |
+| 422 | 검증 실패 (Pydantic) |
+| 500 | 서버 오류 |
+
+### 4. 페이지네이션
+
+```python
+# ✅ 오프셋 기반 (기본)
+GET /api/products?page=2&page_size=20
+
+# ✅ 커서 기반 (대용량)
+GET /api/products?cursor=eyJpZCI6MTAwfQ&limit=20
+```
+
+### 5. 필터링 및 정렬
+
+```python
+# ✅ 필터링
+GET /api/products?status=active&category_id=5
+
+# ✅ 정렬
+GET /api/products?sort_by=created_at&sort_order=desc
+
+# ✅ 검색
+GET /api/products?search=키워드
+
+# ✅ 날짜 범위
+GET /api/products?start_date=2024-01-01&end_date=2024-12-31
+```
+
+### 6. 타입 동기화
+
+```
+백엔드 스키마 (Python)     ←→     프론트엔드 타입 (TypeScript)
+backend/*/schemas.py        ↔     packages/shared/src/types/
+
+필드명 규칙: snake_case (양쪽 동일)
+- created_at: string (ISO 8601)
+- user_id: number
 ```
 
 ## 에러 처리
@@ -925,7 +1161,50 @@ import DOMPurify from 'dompurify';
 <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userInput) }} />
 ```
 
-### 5. 인증 및 세션 관리 (A07:2021)
+### 5. JWT 인증 필수
+
+> **중요**: 공개 API를 제외한 모든 API는 JWT access token 검증이 필수입니다.
+
+```typescript
+// ✅ 인증 필수 API (기본)
+// 모든 API는 기본적으로 인증 필요
+@router.get("/products")
+async def list_products(
+    current_user: User = Depends(get_current_user),  // ✅ 필수
+    db: Session = Depends(get_db)
+):
+    pass
+
+// ✅ 공개 API (예외적으로 명시)
+// 로그인, 회원가입, 공개 조회 등만 예외
+@router.post("/auth/login")  // 공개
+@router.post("/auth/register")  // 공개
+@router.get("/products/public/{id}")  // 공개 (명시적 prefix)
+```
+
+```typescript
+// TypeScript - API 호출 시 항상 토큰 포함
+// ✅ 올바른 예
+const response = await fetch('/api/products', {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include',  // httpOnly 쿠키도 함께 전송
+});
+
+// ❌ 잘못된 예 - 토큰 없이 호출
+const response = await fetch('/api/products');  // ❌ 인증 없음
+```
+
+**JWT 인증 규칙**:
+| 구분 | 인증 필요 | 예시 |
+|------|----------|------|
+| 공개 API | ❌ | 로그인, 회원가입, 공개 상품 조회 |
+| 일반 API | ✅ | 상품 CRUD, 사용자 정보, 주문 |
+| 관리자 API | ✅ + 권한 | 사용자 관리, 시스템 설정 |
+
+### 6. 인증 및 세션 관리 (A07:2021)
 
 ```typescript
 // ✅ 안전한 쿠키 설정
@@ -1063,7 +1342,96 @@ if (process.env.NODE_ENV === 'development') {
 return { error: '서버 오류가 발생했습니다.' };
 ```
 
-### 10. Rate Limiting (A04:2021)
+### 10. 프로덕션 에러 응답 규칙
+
+> **중요**: 프로덕션 환경에서는 HTTP 상태 코드(404, 500 등)와 시스템 정보를 사용자에게 직접 노출하지 않습니다. 모든 응답은 통일된 형식으로 래핑합니다.
+
+```typescript
+// ✅ 프로덕션 에러 응답 - 통일된 형식
+// 백엔드 (Python FastAPI)
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    # 개발 환경: 상세 정보 포함
+    if settings.DEBUG:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "message": str(exc),
+                "error_code": "INTERNAL_ERROR",
+                "details": {"traceback": traceback.format_exc()}
+            }
+        )
+    # 프로덕션: 일반 메시지만
+    return JSONResponse(
+        status_code=200,  # ✅ 항상 200 반환
+        content={
+            "success": False,
+            "message": "요청을 처리할 수 없습니다.",
+            "error_code": "INTERNAL_ERROR"
+        }
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    # 프로덕션에서는 404, 403 등도 통일된 형식으로
+    return JSONResponse(
+        status_code=200,  # ✅ 항상 200 반환
+        content={
+            "success": False,
+            "message": exc.detail if settings.DEBUG else "요청을 처리할 수 없습니다.",
+            "error_code": get_error_code(exc.status_code)
+        }
+    )
+```
+
+```typescript
+// ✅ 프론트엔드 - 에러 응답 처리
+// 모든 API 응답은 success 필드로 성공/실패 판단
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error_code?: string;
+}
+
+async function fetchApi<T>(url: string): Promise<ApiResponse<T>> {
+  const response = await fetch(url, { credentials: 'include' });
+  const data = await response.json();
+
+  // ✅ HTTP 상태 코드가 아닌 success 필드로 판단
+  if (!data.success) {
+    // 사용자에게 보여줄 메시지 사용
+    throw new ApiError(data.message, data.error_code);
+  }
+
+  return data;
+}
+
+// ❌ 잘못된 예 - HTTP 상태 코드로 판단
+if (response.status === 404) {  // ❌ 프로덕션에서는 항상 200
+  showError('Not Found');
+}
+```
+
+**프로덕션 에러 응답 규칙**:
+| 항목 | 개발 환경 | 프로덕션 환경 |
+|------|----------|-------------|
+| HTTP 상태 코드 | 실제 코드 (404, 500 등) | 항상 200 |
+| 에러 메시지 | 상세 메시지 | 일반 메시지 |
+| 스택 트레이스 | 포함 | ❌ 절대 포함 금지 |
+| 시스템 정보 | 포함 가능 | ❌ 절대 포함 금지 |
+| 성공/실패 판단 | `success` 필드 | `success` 필드 |
+
+**에러 코드 매핑 예시**:
+| 내부 상태 | error_code | 사용자 메시지 |
+|----------|------------|--------------|
+| 401 | `AUTH_REQUIRED` | 로그인이 필요합니다 |
+| 403 | `ACCESS_DENIED` | 접근 권한이 없습니다 |
+| 404 | `NOT_FOUND` | 요청한 정보를 찾을 수 없습니다 |
+| 500 | `INTERNAL_ERROR` | 요청을 처리할 수 없습니다 |
+
+### 11. Rate Limiting (A04:2021)
 
 ```typescript
 // ✅ API Rate Limiting 구현
@@ -1095,7 +1463,7 @@ const loginRatelimit = new Ratelimit({
 });
 ```
 
-### 11. 보안 헤더 설정 (A05:2021)
+### 12. 보안 헤더 설정 (A05:2021)
 
 ```typescript
 // next.config.ts
@@ -1134,7 +1502,7 @@ module.exports = {
 };
 ```
 
-### 12. 보안 체크리스트
+### 13. 보안 체크리스트
 
 모든 기능 개발 시 아래 항목을 확인하세요:
 
@@ -1151,7 +1519,7 @@ module.exports = {
 | 응답에 민감 정보가 포함되지 않는가? | ☐ |
 | 의존성 취약점이 없는가? (npm audit) | ☐ |
 
-### 13. OWASP Top 10 (2021) 참고
+### 14. OWASP Top 10 (2021) 참고
 
 | 순위 | 취약점 | 대응 방법 |
 |------|--------|----------|

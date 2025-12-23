@@ -57,30 +57,22 @@ interface ApiError {
 
 class ApiClient {
   private baseUrl: string;
+  private isRefreshing = false;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
-  private getAuthToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('user_token');
-  }
-
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry = false
   ): Promise<T> {
-    const token = this.getAuthToken();
-
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
-
-    if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-    }
 
     let response: Response;
     try {
@@ -108,6 +100,20 @@ class ApiClient {
       }
     }
 
+    // 401 에러 시 토큰 갱신 시도 (공개 API 및 refresh 제외, 재시도 아닌 경우만)
+    if (
+      response.status === 401 &&
+      !isRetry &&
+      !endpoint.includes('/auth/refresh') &&
+      !endpoint.startsWith('/public/')
+    ) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        // 원래 요청 재시도
+        return this.request<T>(endpoint, options, true);
+      }
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
       const apiError: ApiError = {
@@ -118,6 +124,35 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  private async tryRefreshToken(): Promise<boolean> {
+    // 이미 갱신 중이면 기다림
+    if (this.isRefreshing) {
+      return this.refreshPromise!;
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = this.doRefresh();
+
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.isRefreshing = false;
+      this.refreshPromise = null;
+    }
+  }
+
+  private async doRefresh(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/user/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   async get<T>(endpoint: string, params?: Record<string, unknown>): Promise<T> {

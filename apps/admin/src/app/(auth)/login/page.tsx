@@ -37,11 +37,7 @@ export default function LoginPage() {
         return;
       }
 
-      // 토큰을 localStorage에 저장 (백엔드 API 호출용)
-      if (data.token) {
-        localStorage.setItem('admin_token', data.token);
-      }
-
+      // 토큰은 httpOnly 쿠키로 자동 저장됨 (XSS 방지)
       router.push('/');
       router.refresh();
     } catch {

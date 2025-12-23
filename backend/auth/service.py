@@ -10,7 +10,7 @@ from core.config import settings
 from core.security import (
     get_password_hash,
     verify_password,
-    create_access_token,
+    create_token_pair,
 )
 from common.errors import (
     UnauthorizedException,
@@ -50,18 +50,20 @@ class AuthService:
         admin.last_login_at = datetime.now(timezone.utc)
         self.db.commit()
 
-        # 액세스 토큰 생성
+        # 토큰 쌍 생성 (Access + Refresh)
         token_data = {
             "sub": str(admin.id),
             "email": admin.email,
             "name": admin.name,
             "role": admin.role,
         }
-        access_token = create_access_token(data=token_data)
+        access_token, refresh_token = create_token_pair(data=token_data, token_type="admin")
 
         return LoginResponse(
             access_token=access_token,
+            refresh_token=refresh_token,
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            refresh_expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
             admin=AdminResponse.model_validate(admin),
         )
 

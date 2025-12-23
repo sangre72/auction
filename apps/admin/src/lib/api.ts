@@ -102,30 +102,22 @@ interface ApiError {
 
 class ApiClient {
   private baseUrl: string;
+  private isRefreshing = false;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
-  private getAuthToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('admin_token');
-  }
-
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry = false
   ): Promise<T> {
-    const token = this.getAuthToken();
-
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
-
-    if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-    }
 
     let response: Response;
     try {
@@ -154,6 +146,19 @@ class ApiClient {
       }
     }
 
+    // 401 에러 시 토큰 갱신 시도 (refresh 엔드포인트 제외, 재시도 아닌 경우만)
+    if (response.status === 401 && !isRetry && !endpoint.includes('/auth/refresh')) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        // 원래 요청 재시도
+        return this.request<T>(endpoint, options, true);
+      }
+      // 갱신 실패 시 로그인 페이지로 리다이렉트
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
       const apiError: ApiError = {
@@ -164,6 +169,35 @@ class ApiClient {
     }
 
     return response.json();
+  }
+
+  private async tryRefreshToken(): Promise<boolean> {
+    // 이미 갱신 중이면 기다림
+    if (this.isRefreshing) {
+      return this.refreshPromise!;
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = this.doRefresh();
+
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.isRefreshing = false;
+      this.refreshPromise = null;
+    }
+  }
+
+  private async doRefresh(): Promise<boolean> {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   // GET 요청
@@ -207,18 +241,11 @@ class ApiClient {
 
   // 파일 업로드
   async upload<T>(endpoint: string, formData: FormData): Promise<T> {
-    const token = this.getAuthToken();
-
-    const headers: HeadersInit = {};
-    if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-    }
-
+    // httpOnly 쿠키로 인증 (credentials: 'include')
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}${endpoint}`, {
         method: 'POST',
-        headers,
         body: formData,
         credentials: 'include',
       });

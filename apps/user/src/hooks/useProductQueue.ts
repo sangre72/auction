@@ -2,19 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import type { QueueState, QueueStatus } from '@/types/queue';
+import type { QueueState, QueueStatus, UseProductQueueOptions } from '@/types/queue';
 
 // 타입 re-export
-export type { QueueViewer, QueueListData, QueueState, QueueStatus } from '@/types/queue';
+export type { QueueViewer, QueueListData, QueueState, QueueStatus, UseProductQueueOptions } from '@/types/queue';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
-
-interface UseProductQueueOptions {
-  productId: number;
-  userId: string;
-  onEnterAllowed?: (productId: number) => void;
-  autoConnect?: boolean;
-}
 
 export function useProductQueue({
   productId,

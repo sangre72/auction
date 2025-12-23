@@ -28,7 +28,12 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "your-jwt-secret-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24시간
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30분 (보안 강화)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7일
+
+    # 토큰 블랙리스트 설정
+    TOKEN_BLACKLIST_BACKEND: str = "db"  # "db" 또는 "redis"
+    REDIS_URL: str = "redis://localhost:6379/0"  # Redis 사용 시
 
     # 일반 회원 로그인 설정
     ENABLE_EMAIL_LOGIN: bool = True  # 이메일/비밀번호 로그인 사용 여부

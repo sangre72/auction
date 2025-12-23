@@ -2,9 +2,10 @@
  * 인증 훅
  * httpOnly 쿠키 기반 인증 (XSS 방지)
  * 토큰은 서버에서 쿠키로 관리하므로 클라이언트에서 직접 접근하지 않습니다.
+ * Access Token 만료 시 Refresh Token으로 자동 갱신합니다.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AuthState, UseAuthReturn } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -16,12 +17,44 @@ export function useAuth(): UseAuthReturn {
     isLoading: true,
   });
 
+  // 토큰 갱신 중복 방지
+  const isRefreshingRef = useRef(false);
+
+  // 토큰 갱신
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    if (isRefreshingRef.current) return false;
+
+    isRefreshingRef.current = true;
+    try {
+      const response = await fetch(`${API_URL}/user/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      isRefreshingRef.current = false;
+    }
+  }, []);
+
   // 인증 상태 확인 (쿠키 기반)
   const checkAuth = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/user/auth/me`, {
+      let response = await fetch(`${API_URL}/user/auth/me`, {
         credentials: 'include', // 쿠키 포함
       });
+
+      // 401 에러 시 토큰 갱신 시도
+      if (response.status === 401) {
+        const refreshed = await refreshToken();
+        if (refreshed) {
+          // 재시도
+          response = await fetch(`${API_URL}/user/auth/me`, {
+            credentials: 'include',
+          });
+        }
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -44,7 +77,7 @@ export function useAuth(): UseAuthReturn {
         isLoading: false,
       });
     }
-  }, []);
+  }, [refreshToken]);
 
   // 초기 로드 시 인증 상태 확인
   useEffect(() => {

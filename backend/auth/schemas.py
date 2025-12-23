@@ -18,9 +18,20 @@ class LoginResponse(BaseModel):
     """로그인 응답"""
 
     access_token: str
+    refresh_token: str
     token_type: str = "Bearer"
-    expires_in: int
+    expires_in: int  # Access Token 만료 시간 (초)
+    refresh_expires_in: int  # Refresh Token 만료 시간 (초)
     admin: "AdminResponse"
+
+
+class TokenRefreshResponse(BaseModel):
+    """토큰 갱신 응답"""
+
+    access_token: str
+    refresh_token: str
+    expires_in: int
+    refresh_expires_in: int
 
 
 class TokenPayload(BaseModel):

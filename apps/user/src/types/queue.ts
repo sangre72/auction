@@ -9,6 +9,13 @@ export interface QueueViewer {
   status: 'viewing' | 'waiting';
 }
 
+export interface UseProductQueueOptions {
+  productId: number;
+  userId: string;
+  onEnterAllowed?: (productId: number) => void;
+  autoConnect?: boolean;
+}
+
 export interface QueueListData {
   product_id: number;
   total_count: number;

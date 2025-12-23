@@ -3,6 +3,10 @@ import { cookies } from 'next/headers';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+// Access Token: 30분, Refresh Token: 7일
+const ACCESS_TOKEN_MAX_AGE = 60 * 30;
+const REFRESH_TOKEN_MAX_AGE = 60 * 60 * 24 * 7;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -36,22 +40,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = data.data.access_token;
-    const admin = data.data.admin;
+    const { access_token, refresh_token, admin } = data.data;
 
     // 쿠키에 토큰 저장 (미들웨어 인증용)
     const cookieStore = await cookies();
-    cookieStore.set('admin_session', token, {
+
+    // Access Token 쿠키
+    cookieStore.set('admin_session', access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24시간
+      maxAge: ACCESS_TOKEN_MAX_AGE,
       path: '/',
+    });
+
+    // Refresh Token 쿠키 (refresh 엔드포인트에서만 전송)
+    cookieStore.set('admin_refresh', refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: REFRESH_TOKEN_MAX_AGE,
+      path: '/api/auth/refresh',
     });
 
     return NextResponse.json({
       success: true,
-      token,  // 클라이언트 API 호출용 토큰
+      // 토큰은 httpOnly 쿠키로만 전달 (XSS 방지)
       user: {
         id: admin.id,
         email: admin.email,
