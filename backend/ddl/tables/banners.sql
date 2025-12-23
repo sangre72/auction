@@ -35,6 +35,7 @@ CREATE TABLE public.banners (
     type character varying(20),
     image_url character varying(500),
     mobile_image_url character varying(500),
+    alt_text character varying(255),
     video_url character varying(500),
     html_content text,
     link_url character varying(500),
