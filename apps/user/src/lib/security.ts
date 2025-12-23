@@ -7,6 +7,7 @@ import {
   isSecurityBlockResponse,
   getSecurityErrorMessage,
   SecurityErrorCode,
+  formatRetryAfter,
 } from '@auction/shared';
 
 // 차단 상태 저장
@@ -95,16 +96,4 @@ export function getBlockStatus() {
       ? formatRetryAfter(status.retryAfter)
       : null,
   };
-}
-
-function formatRetryAfter(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds}초`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  if (remainingSeconds === 0) {
-    return `${minutes}분`;
-  }
-  return `${minutes}분 ${remainingSeconds}초`;
 }

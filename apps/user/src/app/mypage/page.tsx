@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { formatPrice } from '@auction/shared';
 
 // 임시 데이터
 const summaryData = {
@@ -53,10 +54,6 @@ const recentBids = [
 ];
 
 export default function MyPage() {
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('ko-KR');
-  };
-
   return (
     <div className="space-y-6">
       {/* 주문 상태 요약 */}

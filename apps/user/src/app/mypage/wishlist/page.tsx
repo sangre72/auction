@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { formatPrice } from '@auction/shared';
 import { useWishlist } from '@/hooks/useWishlist';
 import type { WishlistItem } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,8 +16,6 @@ export default function WishlistPage() {
       fetchWishlist();
     }
   }, [isAuthenticated, fetchWishlist]);
-
-  const formatPrice = (price: number) => price.toLocaleString('ko-KR');
 
   const getStatusText = (status: string) => {
     switch (status) {

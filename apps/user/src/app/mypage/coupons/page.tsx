@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { formatNumber } from '@auction/shared';
 
 type CouponStatus = 'available' | 'used' | 'expired';
 
@@ -75,8 +76,6 @@ export default function CouponsPage() {
     : coupons.filter(c => c.status === activeTab);
 
   const availableCount = coupons.filter(c => c.status === 'available').length;
-
-  const formatNumber = (num: number) => num.toLocaleString('ko-KR');
 
   const getDiscountText = (coupon: Coupon) => {
     if (coupon.discountType === 'percent') {

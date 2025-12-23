@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { formatPrice } from '@auction/shared';
 
 type WonStatus = 'all' | 'pending_payment' | 'paid' | 'shipped' | 'completed';
 
@@ -66,8 +67,6 @@ export default function WonPage() {
   const filteredAuctions = activeTab === 'all'
     ? wonAuctions
     : wonAuctions.filter(auction => auction.status === activeTab);
-
-  const formatPrice = (price: number) => price.toLocaleString('ko-KR');
 
   const getStatusColor = (status: WonStatus) => {
     switch (status) {

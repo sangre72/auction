@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSecurityStats, useBannedList } from '../hooks/useSecurity';
-import { getBanTypeLabel, getAttackTypeLabel } from '@auction/shared';
+import { getBanTypeLabel, getAttackTypeLabel, formatRemainingTime } from '@auction/shared';
 
 export function SecurityDashboardWidget() {
   const { stats, loading: statsLoading } = useSecurityStats();
@@ -108,19 +108,6 @@ export function SecurityDashboardWidget() {
       )}
     </div>
   );
-}
-
-function formatRemainingTime(seconds: number | null): string {
-  if (seconds === null) return '영구';
-  if (seconds <= 0) return '만료됨';
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (hours > 0) {
-    return `${hours}시간 ${minutes}분 남음`;
-  }
-  return `${minutes}분 남음`;
 }
 
 function ShieldIcon({ className }: { className?: string }) {

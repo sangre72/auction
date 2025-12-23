@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { formatPrice } from '@auction/shared';
 
 type BidStatus = 'all' | 'active' | 'winning' | 'outbid' | 'ended';
 
@@ -82,8 +83,6 @@ export default function BidsPage() {
     : activeTab === 'active'
     ? bids.filter(bid => bid.status !== 'ended')
     : bids.filter(bid => bid.status === activeTab);
-
-  const formatPrice = (price: number) => price.toLocaleString('ko-KR');
 
   const getTimeRemaining = (endTime: string) => {
     const end = new Date(endTime);

@@ -141,3 +141,40 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+/**
+ * 초 단위 시간을 읽기 쉬운 형식으로 포맷팅
+ * @param seconds - 초 단위 시간
+ * @returns 포맷팅된 시간 (예: "3분 20초")
+ */
+export function formatRetryAfter(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}초`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) {
+    return `${minutes}분`;
+  }
+  return `${minutes}분 ${remainingSeconds}초`;
+}
+
+/**
+ * 남은 시간을 읽기 쉬운 형식으로 포맷팅
+ * @param seconds - 초 단위 남은 시간 (null이면 "영구")
+ * @returns 포맷팅된 시간 (예: "2시간 30분", "영구")
+ */
+export function formatRemainingTime(seconds: number | null): string {
+  if (seconds === null) return '영구';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}시간 ${minutes}분` : `${hours}시간`;
+  }
+  if (minutes > 0) {
+    return `${minutes}분`;
+  }
+  return `${seconds}초`;
+}

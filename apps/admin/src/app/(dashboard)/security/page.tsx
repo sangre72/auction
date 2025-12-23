@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { getBanTypeLabel, getAttackTypeLabel } from '@auction/shared';
+import { getBanTypeLabel, getAttackTypeLabel, formatRemainingTime } from '@auction/shared';
 import {
   useSecurityStats,
   useBannedList,
@@ -422,7 +422,7 @@ function SuspiciousListContent({ list, loading, onClear, onBan }: {
               <p className="font-mono text-white">{item.ip}</p>
               <p className="text-sm text-gray-400">
                 의심 활동 {item.count}회
-                {item.last_seen && ` • 마지막: ${formatDate(item.last_seen)}`}
+                {item.last_seen && ` • 마지막: ${formatDateShort(item.last_seen)}`}
               </p>
             </div>
             <div className="flex gap-2">
@@ -518,21 +518,8 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-// 유틸리티 함수
-function formatRemainingTime(seconds: number | null): string {
-  if (seconds === null) return '영구';
-  if (seconds <= 0) return '만료됨';
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (hours > 0) {
-    return `${hours}시간 ${minutes}분 남음`;
-  }
-  return `${minutes}분 남음`;
-}
-
-function formatDate(dateStr: string): string {
+// 유틸리티 함수 (간결한 날짜 포맷 - 테이블용)
+function formatDateShort(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleString('ko-KR', {
     month: 'short',

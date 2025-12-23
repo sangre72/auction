@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { formatNumber } from '@auction/shared';
 
 type PointType = 'all' | 'earned' | 'used' | 'expired';
 
@@ -60,8 +61,6 @@ export default function PointsPage() {
   const filteredHistory = activeTab === 'all'
     ? pointHistory
     : pointHistory.filter(h => h.type === activeTab);
-
-  const formatNumber = (num: number) => num.toLocaleString('ko-KR');
 
   const currentPoints = 5000;
   const expiringPoints = 2000;

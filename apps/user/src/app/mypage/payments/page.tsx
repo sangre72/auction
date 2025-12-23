@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { formatPrice, formatDate } from '@auction/shared';
 
 type PaymentStatus = 'all' | 'completed' | 'cancelled' | 'refunded';
 
@@ -66,19 +67,6 @@ export default function PaymentsPage() {
 
     fetchPayments();
   }, [activeTab]);
-
-  const formatPrice = (price: number) => price.toLocaleString('ko-KR');
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -222,7 +210,7 @@ export default function PaymentsPage() {
                     <div>
                       <p className="font-medium text-gray-900">{payment.description || payment.order_id}</p>
                       <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
-                        <span>{payment.paid_at ? formatDate(payment.paid_at) : formatDate(payment.created_at)}</span>
+                        <span>{payment.paid_at ? formatDate(payment.paid_at, { includeTime: true }) : formatDate(payment.created_at, { includeTime: true })}</span>
                         <span className="text-gray-300">|</span>
                         <span>{getMethodText(payment.method)}</span>
                       </div>

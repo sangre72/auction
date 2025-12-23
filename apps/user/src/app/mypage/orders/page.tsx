@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { formatPrice, formatDate } from '@auction/shared';
 
 interface PurchaseSlot {
   slot_number: number;
@@ -64,17 +65,6 @@ export default function OrdersPage() {
 
     fetchPurchases();
   }, []);
-
-  const formatPrice = (price: number) => price.toLocaleString('ko-KR');
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-  };
 
   const getStatusText = (status: string) => {
     switch (status) {
