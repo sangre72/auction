@@ -3,21 +3,31 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input, Card, Alert } from '@/components/ui';
-import { TipTapEditor } from './TipTapEditor';
 import { FileUpload } from './FileUpload';
 import type { PostFormData, PostFormErrors, UploadedFile, Board, Post } from '../types';
+import type { EditorPlugin } from '@auction/shared';
 import { uploadImage, uploadAttachment, deleteAttachment } from '../api';
+import { defaultEditor } from '../editors';
 
 interface PostFormProps {
   board: Board;
   post?: Post; // 수정 모드일 때
   onSubmit: (data: PostFormData, attachmentIds: string[]) => Promise<void>;
   onCancel: () => void;
+  /** 에디터 플러그인 (기본: TipTap) */
+  editor?: EditorPlugin;
 }
 
-export function PostForm({ board, post, onSubmit, onCancel }: PostFormProps) {
+export function PostForm({
+  board,
+  post,
+  onSubmit,
+  onCancel,
+  editor = defaultEditor,
+}: PostFormProps) {
   const router = useRouter();
   const isEditMode = !!post;
+  const EditorComponent = editor.component;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -154,8 +164,8 @@ export function PostForm({ board, post, onSubmit, onCancel }: PostFormProps) {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             내용 <span className="text-red-500">*</span>
           </label>
-          <TipTapEditor
-            content={formData.content}
+          <EditorComponent
+            value={formData.content}
             onChange={(content) => updateField('content', content)}
             placeholder="게시글 내용을 입력하세요..."
             onImageUpload={handleImageUpload}

@@ -136,6 +136,34 @@ pg_dump -h localhost -U postgres -d test_db --schema-only > backend/ddl/schema.s
 
 > **핵심**: 모든 모듈은 **디렉토리 단위로 독립적으로 이동/삭제 가능**해야 합니다.
 
+### 앱 독립성 원칙
+
+> **CRITICAL**: 각 앱은 **권한/역할별로 서버가 완전히 분리 배포**될 수 있습니다.
+
+```
+apps/user       → user.example.com      (일반 사용자)
+apps/admin      → admin.example.com     (관리자)
+apps/manager    → manager.example.com   (중간 관리자, 향후 추가 가능)
+```
+
+**설계 원칙:**
+- 각 앱은 독립된 서버/도메인/인프라에서 운영 가능
+- 앱 간 직접 의존성 금지 (오직 `@auction/shared`만 의존)
+- 동일 코드라도 앱별로 독립 유지 허용 (향후 분기 가능성)
+
+| 구분 | 공유 (`@auction/shared`) | 앱별 독립 유지 |
+|------|-------------------------|---------------|
+| 타입 | 백엔드 스키마 기반 (Product, User) | 앱 전용 확장 (UserProfile, AdminSession) |
+| 유틸리티 | 순수 함수 (formatPrice, formatDate) | 상태 관리, 앱별 로직 |
+| 컴포넌트 | 순수 UI (Button, Input) | 비즈니스 로직 포함 |
+| 인증 | 공유 인터페이스, 팩토리 함수 | 앱별 설정, 엔드포인트 |
+
+**앱 추가 시 체크리스트:**
+- [ ] `apps/{role}/` 디렉토리 생성
+- [ ] `@auction/shared`만 의존
+- [ ] 앱 전용 타입은 `apps/{role}/src/types/`
+- [ ] 앱 전용 설정은 `apps/{role}/src/lib/`
+
 ### 프론트엔드 의존성 방향
 
 ```

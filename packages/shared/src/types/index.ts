@@ -3,6 +3,9 @@
  * 백엔드 API 스키마와 동기화됨
  */
 
+// 인증 플러그인 타입
+export * from './auth';
+
 // 세션 관련 타입
 export * from './session';
 

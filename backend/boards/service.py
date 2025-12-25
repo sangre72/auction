@@ -1,13 +1,29 @@
 """
 게시판 서비스
+
+플러그인 아키텍처를 지원하는 게시판 서비스
+다른 프로젝트에서 User 모델과 설정을 주입하여 재사용 가능
+
+Example:
+    # 기본 사용 (User 모델, 기본 설정)
+    service = BoardService(db)
+
+    # 커스텀 설정
+    from boards.config import BoardsPluginConfig
+    custom_config = BoardsPluginConfig(max_file_size=20*1024*1024)
+    service = BoardService(db, config=custom_config)
+
+    # 다른 User 모델 사용
+    service = BoardService(db, user_model=MyUserModel)
 """
 
-from typing import Optional, List
+from typing import Optional, List, Type, Any
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.orm import Session
 
 from common.errors import NotFoundException, BadRequestException, ForbiddenException
 from common.pagination import Pagination, PaginationParams
+from .config import BoardsPluginConfig, boards_plugin_config
 from .models import (
     Board, Post, PostImage, PostAttachment, Comment, PostLike,
     ReadPermission, WritePermission, CommentPermission, PostStatus
@@ -23,10 +39,23 @@ from users.models import User
 
 
 class BoardService:
-    """게시판 서비스"""
+    """
+    게시판 서비스
 
-    def __init__(self, db: Session):
+    플러그인 아키텍처:
+    - config: 게시판 설정 (파일 업로드, 페이지네이션 등)
+    - user_model: 사용자 모델 (기본: User)
+    """
+
+    def __init__(
+        self,
+        db: Session,
+        config: Optional[BoardsPluginConfig] = None,
+        user_model: Optional[Type[Any]] = None,
+    ):
         self.db = db
+        self.config = config or boards_plugin_config
+        self.user_model = user_model or User
 
     # ============================================
     # Board CRUD
@@ -314,7 +343,8 @@ class BoardService:
 
         items = []
         for post in result.items:
-            author = self.db.query(User).filter(User.id == post.author_id).first() if post.author_id else None
+            # 플러그인: user_model 사용
+            author = self.db.query(self.user_model).filter(self.user_model.id == post.author_id).first() if post.author_id else None
             has_images = self.db.query(PostImage).filter(PostImage.post_id == post.id).count() > 0
             has_attachments = self.db.query(PostAttachment).filter(PostAttachment.post_id == post.id).count() > 0
 
@@ -409,7 +439,8 @@ class BoardService:
     ) -> PostResponse:
         """게시글 응답 빌드"""
         board = self.db.query(Board).filter(Board.id == post.board_id).first()
-        author = self.db.query(User).filter(User.id == post.author_id).first() if post.author_id else None
+        # 플러그인: user_model 사용
+        author = self.db.query(self.user_model).filter(self.user_model.id == post.author_id).first() if post.author_id else None
         images = self.db.query(PostImage).filter(PostImage.post_id == post.id).order_by(PostImage.sort_order).all()
         attachments = self.db.query(PostAttachment).filter(PostAttachment.post_id == post.id).all()
 
@@ -546,7 +577,8 @@ class BoardService:
         include_replies: bool = False,
     ) -> CommentResponse:
         """댓글 응답 빌드"""
-        author = self.db.query(User).filter(User.id == comment.author_id).first() if comment.author_id else None
+        # 플러그인: user_model 사용
+        author = self.db.query(self.user_model).filter(self.user_model.id == comment.author_id).first() if comment.author_id else None
 
         replies = []
         if include_replies:

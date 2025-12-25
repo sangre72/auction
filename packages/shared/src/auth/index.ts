@@ -1,6 +1,34 @@
 /**
- * OAuth 소셜 인증 공통 인터페이스
+ * Auth Plugin Module
+ *
+ * 재사용 가능한 인증 시스템
+ * - useAuth: 인증 훅 (팩토리 함수로 생성)
+ * - AuthProvider: 설정 Context Provider
+ * - OAuth: 소셜 로그인 (Kakao, Naver, Google)
  */
+
+// ============================================================================
+// Auth Hook & Provider (Plugin Architecture)
+// ============================================================================
+
+export { createUseAuth, useAuth, useAuthConfig, AuthConfigContext } from './useAuth';
+export { AuthProvider } from './AuthProvider';
+
+// Re-export auth types
+export type {
+  BaseUser,
+  AuthState,
+  UseAuthReturn,
+  AuthLoginResponse,
+  AuthMeResponse,
+  AuthRefreshResponse,
+  LoginCredentials,
+  RegisterCredentials,
+} from '../types/auth';
+
+// ============================================================================
+// OAuth 소셜 인증 공통 인터페이스
+// ============================================================================
 
 export interface OAuthProvider {
   name: string;
